@@ -1,0 +1,4 @@
+{
+  "type": "module",
+  "//": "Marks docs/viewer-common/*.js as ESM for Node so the pure modules here (goto-resolver, diagnostics) can be unit-tested with node:test. Browsers ignore this file; they load the .js as modules via <script type=module>/import. The repo root has no type field, so viewer-3d/*.js stay browser-only scripts."
+}

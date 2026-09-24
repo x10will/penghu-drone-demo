@@ -1,0 +1,631 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0a0a0f;
+  color: #c8ccd4;
+  overflow: hidden;
+}
+
+#canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+canvas { display: block; }
+
+/* Path-flowing edge labels (viewer-edge-flow-labels): 2D text overlay above
+   the WebGL canvas, transparent to input. UI panels live outside the
+   container at higher stacking, so labels never cover controls. */
+#edge-label-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Loading overlay */
+#loading {
+  position: fixed; inset: 0; z-index: 100;
+  background: #0a0a0f;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 14px; gap: 12px;
+  transition: opacity 0.5s;
+}
+#loading.done { opacity: 0; pointer-events: none; }
+#loading-bar {
+  width: 240px; height: 4px;
+  background: #1a1a2e; border-radius: 2px; overflow: hidden;
+}
+#loading-fill {
+  height: 100%; width: 0; background: #34d399;
+  border-radius: 2px; transition: width 0.2s;
+}
+
+/* HUD */
+#hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(180deg, rgba(10,10,15,0.9) 0%, transparent 100%);
+  pointer-events: none;
+}
+#hud > * { pointer-events: auto; }
+#hud h1 { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+#time-display {
+  font-family: 'Consolas', monospace;
+  font-size: 20px; font-weight: 700; color: #fff;
+}
+
+/* Controls bar */
+#controls {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(0deg, rgba(10,10,15,0.92) 0%, transparent 100%);
+  pointer-events: none;
+}
+#controls > * { pointer-events: auto; }
+
+.btn {
+  padding: 5px 12px; background: rgba(30,30,50,0.8);
+  border: 1px solid #2a2a40; border-radius: 4px;
+  color: #8890a0; cursor: pointer;
+  font-family: 'Consolas', monospace; font-size: 12px;
+}
+.btn:hover { background: #1a1e2a; color: #e0e4ec; }
+.btn.active { border-color: #34d399; color: #34d399; }
+
+#scrubber {
+  flex: 1; min-width: 100px; height: 4px;
+  accent-color: #34d399; cursor: pointer;
+}
+#frame-counter {
+  font-family: 'Consolas', monospace;
+  font-size: 11px; color: #5a6170;
+}
+select.ctrl-select {
+  padding: 4px 8px; background: rgba(30,30,50,0.8);
+  border: 1px solid #2a2a40; border-radius: 4px;
+  color: #c8ccd4; font-size: 12px; cursor: pointer;
+}
+
+#goto-input {
+  margin-left: auto; width: 220px;
+  padding: 4px 8px; background: rgba(30,30,50,0.8);
+  border: 1px solid #2a2a40; border-radius: 4px;
+  color: #c8ccd4; font-size: 12px;
+}
+#goto-input::placeholder { color: #6b7080; }
+#goto-input:focus { outline: none; border-color: #5b9bd5; }
+
+/* Layer toggles (HUD) — grouped MECE: Scene / View / Faults */
+#layer-toggles { display: flex; gap: 14px; font-size: 11px; align-items: center; }
+.toggle-group {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding-left: 12px; border-left: 1px solid #2a3340;
+}
+.toggle-group:first-child { padding-left: 0; border-left: none; }
+.toggle-group-label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: #5b6675;
+}
+#layer-toggles label {
+  display: inline-flex; align-items: center; gap: 4px;
+  cursor: pointer; user-select: none;
+  color: #8890a0;
+}
+#layer-toggles label:hover { color: #e0e4ec; }
+#layer-toggles input[type=checkbox] {
+  margin: 0; cursor: pointer; accent-color: #34d399;
+}
+#layer-toggles .layer-failed {
+  color: #ff8a80;
+  border-bottom: 1px dotted #ff5252;
+}
+#layer-toggles .layer-failed::after {
+  content: ' FAILED';
+  color: #ff5252;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* Diagnostic legend — registry-driven (DIAGNOSTIC_AXES). One swatch per axis,
+   grouped, with the live count + the firing rule on hover. */
+#diagnostic-legend {
+  position: fixed; bottom: 70px; left: 16px; z-index: 12;
+  background: rgba(12, 18, 26, 0.92); border: 1px solid #2a3340; border-radius: 6px;
+  padding: 10px 12px; font-size: 11px; color: #c7ced8; max-width: 280px;
+}
+#diagnostic-legend.hidden { display: none; }
+#diagnostic-legend .legend-title {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: #7a8696; margin-bottom: 6px;
+}
+#diagnostic-legend .legend-status {
+  margin: 2px 0 7px; padding: 6px 7px; border-radius: 4px;
+  line-height: 1.35;
+}
+#diagnostic-legend .legend-status-unavailable {
+  color: #f4c78b; background: rgba(154, 89, 24, 0.18); border: 1px solid #6f451c;
+}
+#diagnostic-legend .legend-group-label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;
+  color: #5b6675; margin: 6px 0 3px;
+}
+#diagnostic-legend .legend-row {
+  display: flex; align-items: center; gap: 7px; padding: 2px 0; cursor: default;
+}
+#diagnostic-legend .legend-swatch {
+  width: 11px; height: 11px; border-radius: 2px; flex: 0 0 auto;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+#diagnostic-legend .legend-name { color: #d7dde6; }
+#diagnostic-legend .legend-count { margin-left: auto; color: #7a8696; font-variant-numeric: tabular-nums; }
+
+/* Viewpoint buttons */
+#viewpoints {
+  position: fixed; top: 50px; right: 16px; z-index: 10;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.vp-btn {
+  padding: 4px 10px; background: rgba(20,20,35,0.85);
+  border: 1px solid #2a2a40; border-radius: 4px;
+  color: #8890a0; cursor: pointer; font-size: 11px;
+  text-align: right; white-space: nowrap;
+}
+.vp-btn:hover { border-color: #34d399; color: #e0e4ec; }
+.vp-btn kbd {
+  display: inline-block; padding: 1px 4px; margin-right: 4px;
+  background: #1a1a2e; border-radius: 2px;
+  font-family: 'Consolas', monospace; font-size: 10px;
+}
+
+/* Info panel */
+#info {
+  position: fixed; bottom: 50px; left: 16px; z-index: 10;
+  font-family: 'Consolas', monospace; font-size: 13px;
+  color: #e0e4ec; line-height: 1.6;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 6px 12px; border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Diagnostics legend — colour key for the fault markers */
+#legend {
+  position: fixed; bottom: 50px; right: 16px; z-index: 10;
+  background: rgba(10, 12, 20, 0.92);
+  border: 1px solid #2a2a40; border-radius: 4px;
+  padding: 8px 12px 10px 12px;
+  font-family: 'Consolas', monospace; font-size: 12px;
+  color: #c8ccd4; line-height: 1.5;
+  pointer-events: none; max-width: 320px;
+}
+#legend.hidden { display: none; }
+#legend-title { font-weight: bold; color: #e0e4ec; margin-bottom: 5px; }
+.legend-row { display: flex; align-items: center; margin: 2px 0; }
+.legend-swatch {
+  display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+  margin-right: 7px; flex: 0 0 auto; border: 1px solid rgba(255,255,255,0.25);
+}
+
+/* Typed inspector panel (three-viewer-controls R3) */
+#inspector {
+  position: fixed; top: 50px; right: 140px; z-index: 11;
+  width: 280px; max-height: 60vh; overflow-y: auto;
+  background: rgba(10, 12, 20, 0.92);
+  border: 1px solid #2a2a40; border-radius: 4px;
+  padding: 8px 12px 10px 12px;
+  font-family: 'Consolas', monospace; font-size: 12px;
+  color: #c8ccd4; line-height: 1.5;
+  pointer-events: auto;
+}
+#inspector.hidden { display: none; }
+#inspector-close {
+  position: absolute; top: 4px; right: 6px;
+  width: 18px; height: 18px; padding: 0;
+  background: transparent; border: none;
+  color: #5a6170; cursor: pointer;
+  font-size: 16px; line-height: 16px;
+}
+#inspector-close:hover { color: #f87171; }
+#inspector-type {
+  display: inline-block; padding: 1px 6px; margin-bottom: 4px;
+  background: #1a1f2e; border-radius: 3px;
+  font-size: 11px; color: #34d399; letter-spacing: 0.3px;
+}
+#inspector-id {
+  font-family: 'Consolas', monospace; font-size: 13px;
+  color: #e0e4ec; margin-bottom: 6px;
+  cursor: pointer; word-break: break-all;
+}
+#inspector-id:hover { color: #fff; text-decoration: underline; }
+#inspector-id.copied { color: #34d399; }
+#inspector-body { color: #8890a0; }
+#inspector-body .kv { display: flex; gap: 8px; }
+#inspector-body .kv-key { color: #5a6170; flex: 0 0 38%; }
+#inspector-body .kv-val { color: #c8ccd4; flex: 1; word-break: break-all; }
+.diagnosis-chain { margin-top: 8px; padding-top: 7px; border-top: 1px solid #2a2a40; }
+.diagnosis-chain-step { display: flex; gap: 7px; margin: 5px 0; }
+.diagnosis-chain-index {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; flex: 0 0 17px; border-radius: 50%;
+  color: #0a0c14; background: #34d399; font-size: 10px; font-weight: 700;
+}
+.diagnosis-chain-stage { color: #9aa4b3; font-size: 10px; text-transform: uppercase; }
+.diagnosis-chain-summary { color: #d7dde6; word-break: break-word; }
+
+/* Goto search dropdown (viewer-goto-dropdown) */
+#goto-results {
+  position: absolute; top: 40px; right: 16px; z-index: 30;
+  width: 260px; max-height: 300px; overflow-y: auto;
+  background: rgba(15, 22, 35, 0.95);
+  border: 1px solid #2a2a40; border-radius: 4px;
+}
+#goto-results.hidden { display: none; }
+#goto-results .goto-row {
+  padding: 5px 10px; cursor: pointer; font-size: 12px; color: #c8ccd4;
+  display: flex; justify-content: space-between; gap: 8px;
+}
+#goto-results .goto-row:hover { background: rgba(91, 155, 213, 0.18); }
+#goto-results .goto-row .goto-meta { color: #5b9bd5; white-space: nowrap; }
+
+/* Story card — the wannabe's narration beat (sml-red-v5 task 5.2).
+   Warm gold accent = the protagonist's color (story-narration.js
+   WANNABE_COLOR); sits above the controls bar, out of the inspector's way. */
+#story-card {
+  position: fixed; left: 16px; bottom: 64px; z-index: 9;
+  max-width: 400px;
+  background: rgba(12, 13, 20, 0.92);
+  border: 1px solid #2a2a40; border-left: 3px solid #ffb84d;
+  border-radius: 6px; padding: 12px 16px;
+  transition: opacity 0.35s ease;
+}
+#story-card.hidden { display: none; }
+#story-card-head {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;
+}
+#story-time {
+  font-family: 'Consolas', monospace;
+  font-size: 15px; font-weight: 700; color: #ffb84d;
+}
+#story-beat {
+  font-family: 'Consolas', monospace;
+  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #8890a0;
+}
+#story-text {
+  font-family: 'Segoe UI', 'Microsoft JhengHei', system-ui, sans-serif;
+  font-size: 13.5px; line-height: 1.65; color: #e0e4ec;
+  white-space: pre-line;
+}
+
+/* ── Cinema mode (viewer-story-cinema §4) ─────────────────────────────────
+   body.cinema hides the working chrome; the film keeps ONLY the sim clock,
+   chapter pills, the beat-tick progress bar, and the story lower-third. */
+body.cinema #controls, body.cinema #viewpoints, body.cinema #info,
+body.cinema #inspector, body.cinema #diagnostic-legend,
+body.cinema #scenario-select, body.cinema #act-badge,
+body.cinema #goto-input, body.cinema #goto-results { display: none !important; }
+body.cinema #time-display { font-size: 32px; font-weight: 700; color: #ffd27a; }
+
+#cinema-hud { display: none; }
+body.cinema #cinema-hud { display: block; }
+#cinema-pills { position: fixed; top: 14px; right: 58px; z-index: 11; display: flex; gap: 8px; }
+.cinema-pill {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font: 700 13px Consolas, monospace; color: #8890a0;
+  border: 1px solid #2a2a40; background: rgba(12, 13, 20, 0.85);
+}
+.cinema-pill.active { color: #0c0d14; background: #ffb84d; border-color: #ffb84d; }
+#cinema-exit {
+  position: fixed; top: 14px; right: 16px; z-index: 11;
+  width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+  font: 700 14px Consolas, monospace; color: #8890a0;
+  border: 1px solid #2a2a40; background: rgba(12, 13, 20, 0.85);
+}
+#cinema-exit:hover { color: #ffd27a; border-color: #ffb84d; }
+#cinema-progress {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 3px;
+  background: rgba(255, 255, 255, 0.08); z-index: 11;
+}
+#cinema-progress-fill { height: 100%; width: 0%; background: #ffb84d; }
+.cinema-tick { position: absolute; top: -2px; width: 2px; height: 7px; background: #ffd27a; }
+
+/* Lower-third: bottom-center 760 px, 中文 headline + EN/prose subline. */
+body.cinema #story-card {
+  left: 50%; transform: translateX(-50%); bottom: 30px;
+  width: min(760px, 82vw); max-width: 760px;
+}
+body.cinema #story-beat {
+  font: 700 23px 'Microsoft JhengHei', 'Segoe UI', system-ui, sans-serif;
+  text-transform: none; letter-spacing: 0; color: #ffd27a;
+}
+#story-chips { display: none; }
+body.cinema #story-chips { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+.story-chip {
+  font: 600 11.5px Consolas, monospace; color: #ffd27a;
+  background: rgba(255, 184, 77, 0.12);
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  border-radius: 4px; padding: 2px 8px;
+}
+
+/* Full-screen cards: title / chapter transitions / closing scoreboard. */
+#cinema-card {
+  position: fixed; inset: 0; z-index: 20; padding: 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(5, 6, 10, 0.9); text-align: center;
+}
+#cinema-card.hidden { display: none; }
+#cinema-card-kicker {
+  font: 600 12px Consolas, monospace; letter-spacing: 0.25em;
+  color: #5b9bd5; text-transform: uppercase; margin-bottom: 18px;
+}
+#cinema-card-title {
+  font: 700 44px 'Microsoft JhengHei', 'Segoe UI', system-ui, sans-serif;
+  color: #ffd27a; margin-bottom: 8px;
+}
+#cinema-card-sub { font: 400 20px 'Segoe UI', system-ui, sans-serif; color: #e0e4ec; margin-bottom: 14px; }
+#cinema-card-body {
+  font: 400 14px 'Segoe UI', 'Microsoft JhengHei', system-ui, sans-serif;
+  color: #8890a0; max-width: 640px; line-height: 1.7;
+}
+#cinema-card-table {
+  margin-top: 22px; display: flex; flex-direction: column; gap: 8px;
+  width: min(560px, 80vw);
+}
+.cinema-row {
+  display: flex; justify-content: space-between; gap: 24px; padding: 8px 14px;
+  background: rgba(12, 13, 20, 0.92);
+  border: 1px solid #2a2a40; border-left: 3px solid #ffb84d; border-radius: 4px;
+}
+.cinema-row-label {
+  color: #e0e4ec; text-align: left;
+  font: 400 14px 'Segoe UI', 'Microsoft JhengHei', system-ui, sans-serif;
+}
+.cinema-row-value { color: #ffd27a; font: 700 14px Consolas, monospace; white-space: nowrap; }
+#cinema-card-hint { margin-top: 26px; font: 400 12px Consolas, monospace; color: #5b6070; }
+
+/* Presenter strip: keys legend, surfaces on mouse-move, fades after 3 s. */
+#cinema-presenter {
+  position: fixed; bottom: 14px; right: 16px; z-index: 12;
+  font: 400 12px Consolas, monospace; color: #8890a0;
+  background: rgba(12, 13, 20, 0.85); border: 1px solid #2a2a40;
+  border-radius: 4px; padding: 6px 12px;
+  opacity: 0; transition: opacity 0.4s; pointer-events: none; display: none;
+}
+body.cinema #cinema-presenter { display: block; }
+#cinema-presenter.show { opacity: 1; }
+
+/* ↑/↓ live tempo toast — brief confirmation of the new multiplier. */
+#cinema-tempo {
+  position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 12;
+  font: 600 18px Consolas, monospace; color: #ffb84d;
+  background: rgba(12, 13, 20, 0.85); border: 1px solid #2a2a40;
+  border-radius: 4px; padding: 8px 18px;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none; display: none;
+}
+body.cinema #cinema-tempo { display: block; }
+#cinema-tempo.show { opacity: 1; }
+
+/* ── Mobile Apple-Maps chrome ──────────────────────────────────────────────
+   All declarations that can affect existing chrome stay under body.mobile;
+   desktop pixels therefore retain the immutable pre-chrome reference. */
+#mobile-chrome { display: none; }
+
+/* Touch: the canvas owns its gestures (no browser pan/zoom). OrbitControls
+   also sets style.touchAction='none'; this covers the container background. */
+#canvas-container canvas { touch-action: none; }
+
+body.mobile :is(button, input, select, label) {
+  touch-action: manipulation;
+  min-height: 44px;
+}
+body.mobile :is(button, label) {
+  min-width: 44px;
+}
+body.mobile label {
+  display: inline-flex;
+  align-items: center;
+}
+
+body.mobile {
+  --mobile-glass: rgba(18, 22, 28, .72);
+  --mobile-glass-strong: rgba(18, 22, 28, .72);
+  --mobile-hairline: rgba(255, 255, 255, .08);
+  --mobile-foreground: rgba(255, 255, 255, .88);
+  --mobile-muted: rgba(255, 255, 255, .72);
+  --mobile-active: #34d399;
+  --mobile-radius: 14px;
+  --mobile-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei";
+}
+body.mobile :is(button, input, select, label),
+body.mobile :is(#time-display, #frame-counter) {
+  font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei";
+}
+body.mobile :is(button, input, select, label) {
+  font-size: 12px; font-weight: 400;
+}
+body.mobile #mobile-chrome { display: block; position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+body.mobile #mobile-chrome svg {
+  width: 24px; height: 24px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+body.mobile #inspector-close svg {
+  width: 24px; height: 24px; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+body.mobile #mobile-icon-inventory { display: none; }
+body.mobile #hud, body.mobile #controls, body.mobile #viewpoints { display: none; }
+body.mobile #mobile-status,
+body.mobile #mobile-top-actions button,
+body.mobile #mobile-timeline,
+body.mobile #mobile-sheet,
+body.mobile #mobile-sheet-scrim { pointer-events: auto; }
+body.mobile #mobile-status,
+body.mobile #mobile-top-actions button,
+body.mobile #mobile-timeline,
+body.mobile #mobile-sheet {
+  color: var(--mobile-foreground); background: var(--mobile-glass);
+  border: 1px solid var(--mobile-hairline); box-shadow: var(--mobile-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+body.mobile button { color: var(--mobile-muted); }
+body.mobile button:focus-visible, body.mobile input:focus-visible, body.mobile select:focus-visible {
+  outline: 2px solid var(--mobile-active); outline-offset: 2px;
+}
+body.mobile #goto-input:focus-visible {
+  outline: 2px solid var(--mobile-active); outline-offset: 2px;
+}
+body.mobile button:active, body.mobile button[aria-pressed="true"], body.mobile .btn.active { color: var(--mobile-active); }
+
+body.mobile #mobile-status {
+  position: fixed; top: calc(10px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left)); z-index: 34;
+  min-width: 152px; padding: 0 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 400; font-variant-numeric: tabular-nums;
+}
+body.mobile #mobile-status-time { font-size: 15px; font-weight: 600; color: var(--mobile-foreground); }
+body.mobile #mobile-status-act, body.mobile #mobile-status-scenario {
+  font-size: 13px; font-weight: 600; color: var(--mobile-foreground);
+}
+body.mobile #mobile-top-actions {
+  position: fixed; top: calc(10px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right)); z-index: 34;
+  display: flex; gap: 8px; pointer-events: none;
+}
+body.mobile #mobile-top-actions button {
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  border-radius: 50%; color: var(--mobile-muted);
+}
+body.mobile #mobile-compass[hidden] { display: none; }
+body.mobile #mobile-compass svg { transform: rotate(var(--mobile-compass-angle, 0rad)); }
+
+body.mobile #mobile-timeline {
+  position: fixed; z-index: 35; left: calc(12px + env(safe-area-inset-left));
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(104px + env(safe-area-inset-bottom)); height: 58px;
+  border-radius: 999px; padding: 6px 10px;
+  display: grid; grid-template-columns: 44px auto minmax(60px, 1fr) auto;
+  align-items: center; gap: 7px; transform: translateY(var(--mobile-timeline-lift, 0px));
+  transition: transform 220ms ease;
+}
+body.mobile #mobile-timeline .btn { padding: 0; width: 44px; height: 44px; border-radius: 50%; }
+body.mobile #mobile-timeline #time-display {
+  font-size: 15px; font-weight: 600; color: var(--mobile-foreground); font-variant-numeric: tabular-nums;
+}
+body.mobile #mobile-timeline #scrubber { width: 100%; min-width: 60px; }
+body.mobile #mobile-timeline #frame-counter {
+  font-size: 11px; font-weight: 600; color: var(--mobile-foreground); white-space: nowrap;
+}
+
+body.mobile #mobile-sheet-scrim {
+  position: fixed; inset: 0; z-index: 31; background: rgba(0, 0, 0, .36);
+  opacity: 0; transition: opacity 180ms ease;
+}
+body.mobile #mobile-sheet-scrim[data-visible="true"] { opacity: 1; }
+body.mobile #mobile-sheet {
+  position: fixed; z-index: 33; left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right)); bottom: 0;
+  height: min(90dvh, 760px); border-radius: var(--mobile-radius) var(--mobile-radius) 0 0;
+  background: var(--mobile-glass-strong); overflow: hidden;
+  transform: translate3d(0, var(--mobile-sheet-y, calc(100% - 93px)), 0);
+  will-change: transform; contain: layout paint;
+}
+body.mobile #mobile-sheet-handle-row { height: 48px; display: flex; align-items: center; justify-content: center; position: relative; }
+body.mobile #mobile-sheet-grabber { width: 80px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; }
+body.mobile #mobile-sheet-grabber span { width: 38px; height: 5px; border-radius: 9px; background: #68717d; }
+body.mobile #mobile-detents { position: absolute; right: 8px; display: flex; }
+body.mobile #mobile-detents button { width: 44px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; }
+body.mobile #mobile-section-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 12px 10px; scrollbar-width: none; }
+body.mobile #mobile-section-tabs button {
+  flex: 0 0 auto; padding: 0 13px; border-radius: 999px;
+  border: 1px solid var(--mobile-hairline); background: rgba(255,255,255,.045);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+body.mobile #mobile-section-tabs button[aria-selected="true"] { color: var(--mobile-active); border-color: rgba(52,211,153,.58); }
+body.mobile #mobile-sheet-content { overflow: auto; overscroll-behavior: contain; height: calc(100% - 104px); padding: 4px 14px calc(24px + env(safe-area-inset-bottom)); }
+body.mobile [data-mobile-panel][hidden] { display: none; }
+body.mobile [data-mobile-panel] { min-height: 80px; }
+body.mobile :is(#mobile-slot-search,#mobile-slot-scenario,#mobile-slot-viewpoints,#mobile-slot-layers,#mobile-slot-tools) { display: flex; flex-direction: column; gap: 10px; }
+body.mobile #goto-input { margin: 0; width: 100%; padding: 10px 12px; }
+body.mobile #goto-results { position: static; width: 100%; max-height: 38vh; }
+body.mobile #viewpoints { position: static; display: flex; flex-direction: column; gap: 7px; }
+body.mobile .vp-btn { min-height: 44px; text-align: left; font-size: 12px; font-weight: 400; color: var(--mobile-muted); }
+body.mobile #layer-toggles, body.mobile .toggle-group { display: flex; flex-direction: column; align-items: stretch; gap: 7px; padding: 0; border: 0; }
+body.mobile #layer-toggles label { min-height: 44px; font-size: 12px; font-weight: 400; color: var(--mobile-muted); }
+body.mobile :is(#scenario-select, #goto-input, #btn-cinema) {
+  font-size: 12px; font-weight: 400; color: var(--mobile-muted);
+}
+body.mobile #mobile-slot-tools .btn, body.mobile #mobile-zoom-row .btn { width: 100%; }
+body.mobile #mobile-zoom-row { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 8px; margin-top: 12px; }
+body.mobile #mobile-zoom-row .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+body.mobile #inspector {
+  left: 10px; right: 10px; width: auto;
+  top: calc(66px + env(safe-area-inset-top)); max-height: 45vh;
+  background: var(--mobile-glass-strong); border-color: var(--mobile-hairline);
+  border-radius: var(--mobile-radius); box-shadow: var(--mobile-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+}
+body.mobile #story-card { background: var(--mobile-glass-strong); border-color: var(--mobile-hairline); border-radius: var(--mobile-radius); box-shadow: var(--mobile-shadow); }
+body.mobile #info {
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  font-size: 11px; max-width: 70vw;
+}
+body.mobile #diagnostic-legend { bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+body.cinema #mobile-chrome { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  body.mobile #mobile-sheet-scrim, body.mobile #mobile-timeline { transition-duration: 0ms; }
+}
+
+/* Canonical projections reuse the story surface, with persistent receipt links. */
+body.canonical-site #story-card {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(400px, calc(100vw - 64px)); max-height: min(52vh, 390px);
+  box-sizing: border-box; overflow: hidden;
+}
+body.canonical-site #story-card.hidden { display: none; }
+body.canonical-site #story-card-head { min-width: 0; flex-wrap: wrap; }
+body.canonical-site #story-beat { overflow-wrap: anywhere; }
+body.canonical-site #story-text {
+  min-height: 0; overflow-y: auto; overflow-wrap: anywhere;
+  white-space: normal; padding-right: 5px;
+}
+body.canonical-site #story-text details { font-size: 11px; line-height: 1.5; }
+body.canonical-site #story-text summary { cursor: pointer; color: #bbc5d7; }
+body.canonical-site .canonical-notices { margin-bottom: 8px; }
+body.canonical-site .canonical-notification + .canonical-notification { margin-top: 10px; }
+body.canonical-site #story-chips {
+  display: flex; gap: 5px; margin-top: 9px; padding-top: 8px;
+  border-top: 1px solid #3b3d4a; flex-wrap: wrap;
+}
+body.canonical-site #story-chips a { color: inherit; overflow-wrap: anywhere; font-size: 10px; }
+
+/* Site capability gates survive desktop controls moving into mobile slots. */
+.no-scenarios #scenario-select,
+.no-scenarios #mobile-status-scenario,
+.no-scenarios [data-mobile-section="scenario"],
+.no-scenarios #mobile-section-scenario,
+.no-playback #mobile-status,
+.no-playback #mobile-timeline,
+.no-playback #time-display,
+.no-playback #act-badge,
+.no-playback #btn-play,
+.no-playback #btn-step-back,
+.no-playback #btn-step-fwd,
+.no-playback #speed-select,
+.no-playback #scrubber,
+.no-playback #frame-counter,
+.no-playback #btn-cinema,
+.no-playback #btn-toggle-story,
+.no-playback #btn-toggle-markers,
+.no-playback #btn-toggle-vehicles { display: none !important; }

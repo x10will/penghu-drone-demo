@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日月潭 Base Stage — T1 Travel Surfaces</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loading">
+  <div>Loading 日月潭 base stage...</div>
+  <div id="loading-bar"><div id="loading-fill"></div></div>
+  <div id="loading-status">Initializing...</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="hud">
+  <h1>日月潭 — Base T1 Stage</h1>
+  <span class="badge">T1 nodes + T2 facility edges (diagnostic)</span>
+  <span id="surface-counts" class="badge"></span>
+  <span id="layer-toggles" class="badge">
+    <label><input type="checkbox" id="toggle-terrain" data-layer="terrain" checked> 1 terrain</label>
+    <label><input type="checkbox" id="toggle-lake" data-layer="lake" checked> 2 lake</label>
+    <label><input type="checkbox" id="toggle-nodes" data-layer="nodes" checked> 3 nodes</label>
+    <label><input type="checkbox" id="toggle-surfaces" data-layer="surfaces" checked> 4 surfaces</label>
+    <label><input type="checkbox" id="toggle-sim-nodes" data-layer="sim-nodes" checked> 5 sim-nodes</label>
+  </span>
+  <input type="text" id="goto-input" placeholder="Go to twin (N-INT-…, E-…)" autocomplete="off">
+  <span id="info" class="badge"></span>
+</div>
+
+<div id="inspector" class="hidden">
+  <button id="inspector-close" aria-label="Close inspector">&times;</button>
+  <span id="inspector-type"></span>
+  <div id="inspector-id" title="Click to copy"></div>
+  <div id="inspector-body"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "../../node_modules/three/build/three.module.js",
+    "three/addons/": "../../node_modules/three/examples/jsm/"
+  }
+}
+</script>
+<!-- Per-site config: classic script, runs before the deferred module so DT_SITE
+     et al. are set synchronously (viewer-3d-site-agnostic D1). -->
+<script src="site-config.js"></script>
+<script type="module" src="base.js"></script>
+</body>
+</html>

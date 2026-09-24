@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "site": "penghu",
+    "source": "OpenStreetMap via Overpass API",
+    "queried": "2026-05-09",
+    "bbox": [119.3, 23.2, 119.8, 23.8],
+    "notes": "15 nodes (airports/ports/medical/school/gov), 8 air corridors. Wind baseline 6.3 m/s = Penghu annual avg. Seasonal availability reflects east-asia monsoon: short corridors (<15km) winter-capable, long corridors (>20km) spring/summer/autumn only."
+  },
+  "nodes": [
+    { "id": "N01", "name": "澎湖機場", "name_en": "Penghu Airport (Magong)", "archetype": "airport", "lat": 23.5686, "lng": 119.6294, "island": "馬公", "osm_id": "way/294014021", "iata": "MZG" },
+    { "id": "N02", "name": "七美機場", "name_en": "Qimei Airport", "archetype": "airport", "lat": 23.2130, "lng": 119.4176, "island": "七美", "osm_id": "way/422239069", "iata": "CMJ" },
+    { "id": "N03", "name": "望安機場", "name_en": "Wang-an Airport", "archetype": "airport", "lat": 23.3691, "lng": 119.5035, "island": "望安", "osm_id": "way/239190742", "iata": "WOT" },
+    { "id": "N04", "name": "馬公碼頭", "name_en": "Magong Port", "archetype": "port", "lat": 23.5626, "lng": 119.5647, "island": "馬公", "osm_id": "node/2423110537" },
+    { "id": "N05", "name": "南滬港", "name_en": "Nanhu Port (Qimei Harbor)", "archetype": "port", "lat": 23.1946, "lng": 119.4190, "island": "七美", "osm_id": "way/740880256" },
+    { "id": "N06", "name": "望安碼頭", "name_en": "Wang-an Harbor", "archetype": "port", "lat": 23.3620, "lng": 119.5082, "island": "望安", "osm_id": "node/6782876608" },
+    { "id": "N07", "name": "赤崁漁港", "name_en": "Chikan Fishing Harbor (Jibei Ferry)", "archetype": "port", "lat": 23.6666, "lng": 119.6039, "island": "白沙", "osm_id": "way/508155230" },
+    { "id": "N08", "name": "虎井碼頭", "name_en": "Huxi (Hujing) Harbor", "archetype": "port", "lat": 23.4878, "lng": 119.5141, "island": "虎井", "osm_id": "node/6782958086" },
+    { "id": "N09", "name": "衛福部澎湖醫院", "name_en": "Penghu Hospital, MOHW", "archetype": "hospital", "lat": 23.5642, "lng": 119.5659, "island": "馬公", "osm_id": "way/619333028" },
+    { "id": "N10", "name": "望安鄉衛生所", "name_en": "Wang-an Township Public Health Center", "archetype": "clinic", "lat": 23.3617, "lng": 119.4970, "island": "望安", "osm_id": "way/257777661" },
+    { "id": "N11", "name": "吉貝衛生所", "name_en": "Jibei Public Health Center", "archetype": "clinic", "lat": 23.7407, "lng": 119.6138, "island": "吉貝", "osm_id": "way/782625690" },
+    { "id": "N12", "name": "澎湖科技大學", "name_en": "National Penghu University of Science and Technology", "archetype": "school", "lat": 23.5748, "lng": 119.5833, "island": "馬公", "osm_id": "relation/11179672" },
+    { "id": "N13", "name": "七美鄉公所", "name_en": "Qimei Township Office", "archetype": "government", "lat": 23.2067, "lng": 119.4245, "island": "七美", "osm_id": "way/688053833" },
+    { "id": "N14", "name": "望安鄉公所", "name_en": "Wang-an Township Office", "archetype": "government", "lat": 23.3576, "lng": 119.5002, "island": "望安", "osm_id": "way/1056658255" },
+    { "id": "N15", "name": "七美鄉衛生所", "name_en": "Qimei Township Public Health Center", "archetype": "clinic", "lat": 23.2041, "lng": 119.4309, "island": "七美", "osm_id": "way/446003385" }
+  ],
+  "edges": {
+    "traversal": [
+      { "id": "E001", "from": "N01", "to": "N02", "mode": "air", "distance_m": 45063, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn"], "polyline": [[23.5686, 119.6294], [23.2130, 119.4176]] },
+      { "id": "E002", "from": "N01", "to": "N03", "mode": "air", "distance_m": 25632, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn"], "polyline": [[23.5686, 119.6294], [23.3691, 119.5035]] },
+      { "id": "E003", "from": "N01", "to": "N07", "mode": "air", "distance_m": 11203, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn", "winter"], "polyline": [[23.5686, 119.6294], [23.6666, 119.6039]] },
+      { "id": "E004", "from": "N01", "to": "N08", "mode": "air", "distance_m": 14795, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn", "winter"], "polyline": [[23.5686, 119.6294], [23.4878, 119.5141]] },
+      { "id": "E005", "from": "N07", "to": "N11", "mode": "air", "distance_m": 8292, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn", "winter"], "polyline": [[23.6666, 119.6039], [23.7407, 119.6138]] },
+      { "id": "E006", "from": "N09", "to": "N10", "mode": "air", "distance_m": 23311, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn"], "polyline": [[23.5642, 119.5659], [23.3617, 119.4970]] },
+      { "id": "E007", "from": "N09", "to": "N15", "mode": "air", "distance_m": 41672, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn"], "polyline": [[23.5642, 119.5659], [23.2041, 119.4309]] },
+      { "id": "E008", "from": "N09", "to": "N11", "mode": "air", "distance_m": 20142, "wind_baseline_ms": 6.3, "altitude_band_m": [50, 120], "seasonal_availability": ["spring", "summer", "autumn"], "polyline": [[23.5642, 119.5659], [23.7407, 119.6138]] }
+    ]
+  }
+}

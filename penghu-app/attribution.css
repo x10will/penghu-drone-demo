@@ -1,0 +1,9 @@
+/* Reserve a row below the map so credits never obscure its controls or legend. */
+.credited-map{display:grid;grid-template-rows:minmax(0,1fr) auto}
+.map-viewport{position:relative;min-width:0;min-height:0}
+.map-viewport>iframe{display:block}
+.map-credit{padding:4px 8px;border-top:1px solid #375060;background:#0c1b26;color:#a9bfcc;font:10px/1.5 system-ui,sans-serif;text-align:right;overflow-wrap:anywhere}
+.map-credit span{display:inline}
+.map-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.map-credit a:hover,.map-credit a:focus-visible{color:#e9f1f5}
+@media(max-width:700px){.map-credit{text-align:left}}

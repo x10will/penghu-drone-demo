@@ -1,0 +1,24 @@
+html.dt-embed, html.dt-embed body {
+  width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none;
+}
+html.dt-embed body > :not(#canvas-container):not(#loading):not(#dt-embed-navigation):not(script):not(link) {
+  display: none !important;
+}
+html.dt-embed #canvas-container { position: fixed; inset: 0; width: 100%; height: 100%; }
+html.dt-embed #canvas-container canvas { touch-action: none; }
+html.dt-embed #loading.done { display: none; }
+html.dt-embed #dt-embed-navigation {
+  position: fixed; top: 12px; right: 12px; z-index: 50;
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+  max-width: calc(100% - 24px); pointer-events: none;
+}
+html.dt-embed #dt-embed-navigation button {
+  pointer-events: auto; display: inline-flex !important; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px; padding: 6px 10px; border-radius: 8px;
+  background: rgba(18, 32, 43, .94); color: white; border: 1px solid #607080;
+}
+html.dt-embed #dt-embed-navigation svg { width: 22px; height: 22px; fill: none; stroke: currentColor; }
+html.dt-embed #dt-embed-navigation #viewpoints {
+  display: flex !important; position: static; flex-basis: 100%; flex-wrap: wrap;
+  justify-content: flex-end; gap: 6px; max-height: 25vh; overflow: auto; pointer-events: auto;
+}

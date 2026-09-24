@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>日月潭 3D — Digital Twin Viewer</title>
+<link rel="stylesheet" href="style.css">
+<script>
+if (new URLSearchParams(location.search).get('embed') === '1') {
+  document.documentElement.classList.add('dt-embed');
+  document.write('<link rel="stylesheet" href="embed.css">');
+}
+</script>
+</head>
+<body>
+
+<div id="loading">
+  <div>Loading 日月潭 3D...</div>
+  <div id="loading-bar"><div id="loading-fill"></div></div>
+  <div id="loading-status">Initializing...</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="hud">
+  <h1>日月潭 3D</h1>
+  <span id="time-display">--:--</span>
+  <span id="act-badge" style="padding:2px 8px;border-radius:3px;font-size:11px;background:#0f2940;color:#5b9bd5">--</span>
+  <select id="scenario-select" class="ctrl-select">
+    <option value="v5_a">v5 A — Baseline</option>
+    <option value="v5_b">v5 B — Constraints</option>
+    <option value="v5_c">v5 C — 甲租乙還</option>
+  </select>
+  <input type="text" id="goto-input" placeholder="Go to twin (N01, E042, 水社…)" autocomplete="off">
+  <div id="goto-results" class="hidden"></div>
+</div>
+
+<div id="controls">
+  <button class="btn" id="btn-play">&#9654; Play</button>
+  <button class="btn" id="btn-step-back">&larr;</button>
+  <button class="btn" id="btn-step-fwd">&rarr;</button>
+  <select id="speed-select" class="ctrl-select">
+    <option value="500">0.5x</option>
+    <option value="200">1x</option>
+    <option value="100">2x</option>
+    <option value="40" selected>5x</option>
+    <option value="20">10x</option>
+  </select>
+  <input type="range" id="scrubber" min="0" max="100" value="0">
+  <span id="frame-counter">0 / 0</span>
+  <button class="btn" id="btn-toggle-story" style="display:none">Story: ON</button>
+  <button class="btn" id="btn-cinema" title="A→B→C 放映（約 6 分鐘）">&#9654; 放映 Cinema</button>
+  <button class="btn" id="btn-toggle-markers">Markers: OFF</button>
+  <button class="btn" id="btn-toggle-vehicles">Vehicles: OFF</button>
+  <!-- Toggles grouped MECE (viewer-diagnostic-registry): Scene = additive
+       geometry · View = exclusive representation (Normal⟷Diagnosis X-ray) ·
+       Faults = the diagnostic overlay + its legend. -->
+  <span id="layer-toggles">
+    <span class="toggle-group">
+      <span class="toggle-group-label">Scene</span>
+      <label><input type="checkbox" id="toggle-terrain" checked> terrain</label>
+      <label><input type="checkbox" id="toggle-lake" checked> lake</label>
+      <label id="toggle-support-structures-label" style="display:none"><input type="checkbox" id="toggle-support-structures" checked> supports</label>
+      <label><input type="checkbox" id="toggle-buildings" checked> buildings</label>
+      <label><input type="checkbox" id="toggle-edges" checked> edges</label>
+      <label><input type="checkbox" id="toggle-nodes" checked> nodes</label>
+      <label id="toggle-junction-plates-label" style="display:none"><input type="checkbox" id="toggle-junction-plates" checked> junction plates</label>
+      <label id="toggle-props-label" style="display:none"><input type="checkbox" id="toggle-props" checked> props</label>
+      <label id="toggle-splats-label" style="display:none"><input type="checkbox" id="toggle-splats" checked> splats</label>
+      <label id="toggle-edge-labels-label" style="display:none"><input type="checkbox" id="toggle-edge-labels" checked> labels</label>
+      <label id="toggle-farm-field-ridges-label" style="display:none"><input type="checkbox" id="toggle-farm-field-ridges" checked> field ridges</label>
+    </span>
+    <span class="toggle-group">
+      <span class="toggle-group-label">View</span>
+      <label title="X-ray: hide the baked surfaces, show the authored graph + nodes">
+        <input type="checkbox" id="toggle-diagnosis"> diagnosis</label>
+    </span>
+    <span class="toggle-group">
+      <span class="toggle-group-label">Faults</span>
+      <button class="btn" id="btn-toggle-diagnostics">Diagnostics: OFF</button>
+      <label id="toggle-terrain-faults-label" style="display:none"><input type="checkbox" id="toggle-terrain-faults"> terrain faults</label>
+    </span>
+  </span>
+</div>
+
+<!-- Viewpoint buttons are generated from DT_SITE.viewpoints by main.js
+     (viewer-3d-site-agnostic): the UI is site-driven, not hardcoded. -->
+<div id="viewpoints"></div>
+
+<!-- Mobile-only Apple-Maps chrome. Functional desktop controls are moved into
+     these slots by identity (never cloned) and restored byte-for-byte in order. -->
+<div id="mobile-chrome" aria-label="Mobile viewer controls">
+  <button id="mobile-status" type="button" aria-label="Open scenario controls">
+    <span id="mobile-status-time">--:--</span><span aria-hidden="true"> · </span>
+    <span id="mobile-status-act">--</span><span aria-hidden="true"> · </span>
+    <span id="mobile-status-scenario">--</span>
+  </button>
+  <div id="mobile-top-actions">
+    <button id="mobile-compass" type="button" aria-label="Reset north-up view" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4 9-4 9-4-9z"/><path d="M12 3v9"/></svg>
+    </button>
+    <button id="mobile-search" type="button" aria-label="Open search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+    </button>
+  </div>
+
+  <div id="mobile-timeline" aria-label="Timeline controls">
+    <div id="mobile-timeline-play-slot"></div>
+    <div id="mobile-timeline-time-slot"></div>
+    <div id="mobile-timeline-scrubber-slot"></div>
+    <div id="mobile-timeline-frame-slot"></div>
+  </div>
+
+  <div id="mobile-sheet-scrim" hidden></div>
+  <section id="mobile-sheet" aria-label="Viewer controls" data-detent="peek">
+    <div id="mobile-sheet-handle-row">
+      <button id="mobile-sheet-grabber" type="button" aria-label="Expand controls" aria-expanded="false">
+        <span aria-hidden="true"></span>
+      </button>
+      <div id="mobile-detents" aria-label="Sheet position">
+        <button type="button" data-mobile-detent="peek" aria-label="Minimize controls">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <button type="button" data-mobile-detent="half" aria-label="Show half controls">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg>
+        </button>
+        <button type="button" data-mobile-detent="full" aria-label="Expand controls">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav id="mobile-section-tabs" aria-label="Control sections">
+      <button type="button" data-mobile-section="search" aria-controls="mobile-section-search">Search</button>
+      <button type="button" data-mobile-section="scenario" aria-controls="mobile-section-scenario">Scenario</button>
+      <button type="button" data-mobile-section="viewpoints" aria-controls="mobile-section-viewpoints">Viewpoints</button>
+      <button type="button" data-mobile-section="layers" aria-controls="mobile-section-layers">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 8 8-4 8 4-8 4z"/><path d="m4 12 8 4 8-4M4 16l8 4 8-4"/></svg><span>Layers</span>
+      </button>
+      <button type="button" data-mobile-section="tools" aria-controls="mobile-section-tools">Tools</button>
+    </nav>
+    <div id="mobile-sheet-content">
+      <section id="mobile-section-search" data-mobile-panel="search" aria-label="Search"><div id="mobile-slot-search"></div></section>
+      <section id="mobile-section-scenario" data-mobile-panel="scenario" aria-label="Scenario" hidden><div id="mobile-slot-scenario"></div></section>
+      <section id="mobile-section-viewpoints" data-mobile-panel="viewpoints" aria-label="Viewpoints" hidden><div id="mobile-slot-viewpoints"></div></section>
+      <section id="mobile-section-layers" data-mobile-panel="layers" aria-label="Layers" hidden><div id="mobile-slot-layers"></div></section>
+      <section id="mobile-section-tools" data-mobile-panel="tools" aria-label="Tools" hidden>
+        <div id="mobile-slot-tools"></div>
+        <div id="mobile-zoom-row" aria-label="Zoom controls">
+          <button class="btn" id="btn-zoom-in" aria-label="Zoom in">+</button>
+          <button class="btn" id="btn-zoom-out" aria-label="Zoom out">−</button>
+          <button class="btn" id="btn-reset-view" aria-label="Reset view">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v6h6"/></svg><span>Reset</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- License-clean hand-authored icon inventory; paths use no external asset. -->
+  <svg id="mobile-icon-inventory" aria-hidden="true" viewBox="0 0 24 24">
+    <g id="icon-play"><path d="m8 5 11 7-11 7z"/></g>
+    <g id="icon-pause"><path d="M8 5v14M16 5v14"/></g>
+    <g id="icon-close"><path d="m5 5 14 14M19 5 5 19"/></g>
+    <g id="icon-film"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M17 9h4M3 15h4M17 15h4"/></g>
+  </svg>
+</div>
+
+<div id="info"></div>
+
+<!-- Story card — the wannabe's narration beat at the current sim time
+     (sml-red-v5 task 5.2). Fed from director_narration_<scenario>.json via
+     viewer-common/story-narration.js; shown while story mode is on. -->
+<div id="story-card" class="hidden">
+  <div id="story-card-head">
+    <span id="story-time"></span>
+    <span id="story-beat"></span>
+  </div>
+  <div id="story-text"></div>
+  <div id="story-chips"></div>
+</div>
+
+<!-- Cinema mode (viewer-story-cinema §4): chapter pills + beat-tick progress
+     bar + presenter strip appear only under body.cinema; the full-screen
+     card overlay carries the title/chapter/closing copy and the sourced
+     closing scoreboard (rows render from story config closing_card). -->
+<div id="cinema-hud">
+  <div id="cinema-pills"></div>
+  <button id="cinema-exit" title="離開放映 (Esc)">&times;</button>
+  <div id="cinema-progress"><div id="cinema-progress-fill"></div></div>
+  <div id="cinema-tempo"></div>
+</div>
+<div id="cinema-card" class="hidden">
+  <div id="cinema-card-kicker"></div>
+  <div id="cinema-card-title"></div>
+  <div id="cinema-card-sub"></div>
+  <div id="cinema-card-body"></div>
+  <div id="cinema-card-table"></div>
+  <div id="cinema-card-hint"></div>
+</div>
+<div id="cinema-presenter">Space 暫停 · ←/→ 節拍 · ↑/↓ 速度 · N/P 章節 · F 自由視角 · Esc 離開</div>
+
+<!-- Diagnostic legend — populated from the DIAGNOSTIC_AXES registry by main.js
+     (buildDiagnosticLegend). Shown with the Faults/Diagnostics toggle so a color
+     always has a stated meaning. -->
+<div id="diagnostic-legend" class="hidden"></div>
+
+<div id="inspector" class="hidden">
+  <button id="inspector-close" aria-label="Close inspector">&times;</button>
+  <span id="inspector-type"></span>
+  <div id="inspector-id" title="Click to copy"></div>
+  <div id="inspector-body"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "../../node_modules/three/build/three.module.min.js",
+    "three/addons/": "../../node_modules/three/examples/jsm/",
+    "@mkkellogg/gaussian-splats-3d": "../../node_modules/@mkkellogg/gaussian-splats-3d/build/gaussian-splats-3d.module.js"
+  }
+}
+</script>
+<!-- Per-site config: classic script, runs before the deferred module so DT_SITE
+     et al. are set synchronously (viewer-3d-site-agnostic D1). -->
+<script src="deployment-config.js"></script>
+<script src="site-config.js"></script>
+<script>
+if (new URLSearchParams(location.search).get('embed') === '1') {
+  document.write('<script type="module" src="embed-adapter.js"><\/script>');
+}
+</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>

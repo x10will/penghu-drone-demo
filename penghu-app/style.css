@@ -1,0 +1,44 @@
+*{box-sizing:border-box}body{margin:0;background:#0c1b26;color:#e9f1f5;font:15px system-ui,sans-serif}header{height:78px;display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid #375060}h1{font-size:22px;margin:0 0 4px}small,.hint{color:#a9bfcc}#time{font-size:32px;font-variant-numeric:tabular-nums}main{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:calc(100vh - 78px)}#map{position:relative;min-width:0}iframe{width:100%;height:100%;border:0}aside{padding:16px 20px;overflow:auto;border-left:1px solid #375060}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-size:13px;color:#c6d8e2;margin:7px 0}select,input,button{font:inherit}select,input[type=time]{width:100%;min-height:40px;background:#183244;color:#fff;border:1px solid #486878;border-radius:5px;padding:6px}button{min-height:44px;background:#087b86;color:white;border:1px solid #41acb6;border-radius:5px;padding:8px 16px;cursor:pointer}button:disabled{opacity:.45;cursor:default}#plan{width:100%;margin-top:12px}#status{font-size:13px}#summary{border-top:1px solid #426173;padding-top:12px}#summary h2{font-size:18px;color:#70e1d5;margin:0 0 12px}dl{display:grid;grid-template-columns:1fr auto;margin:0;font-size:14px;gap:7px}dd{margin:0;font-variant-numeric:tabular-nums}#summary p{font-size:13px;line-height:1.7}.actions{display:flex;align-items:center;gap:12px;margin-top:12px}.actions label{display:flex;align-items:center;gap:5px}.actions select{width:auto}#hour{width:100%;min-height:40px}.hint{font-size:12px;line-height:1.6}#error{color:#ffb7b7}.ramp{height:12px;background:linear-gradient(90deg,#2ecc71,#fdcb6e 42%,#d63031 82%,#7d1128);margin:8px 0}#legend{position:absolute;bottom:20px;left:20px;width:275px;background:#0c1b26ed;border:1px solid #58798a;border-radius:8px;padding:14px;font-size:12px}#legend p{margin-bottom:0;line-height:1.7}#ledger{position:absolute;top:16px;left:20px;background:#071e29ed;border:1px solid #52cfc1;border-radius:7px;padding:12px 18px;font-size:17px;max-width:calc(100% - 355px)}#ledger small{display:block;margin-top:5px;font-size:13px}hr{border:0;border-top:1px solid #375060;margin:18px 0}
+@media(max-width:700px){
+ header{height:76px;padding:8px 12px;gap:8px}h1{font-size:17px}header small{display:block;font-size:10px;max-width:265px}#time{font-size:26px}
+ main{display:flex;flex-direction:column;height:calc(100dvh - 76px)}
+ #map{height:46%;min-height:270px;flex-shrink:0}iframe{display:block}
+ aside{flex:1;min-height:0;padding:8px 14px 18px;overflow-y:auto;border-left:0;border-top:1px solid #375060;overscroll-behavior:contain}
+ label{margin:4px 0}select,input[type=time]{min-height:44px;font-size:16px}
+ #legend{left:8px;bottom:8px;width:184px;padding:6px 8px;font-size:10px;pointer-events:none}#legend p{font-size:9px;margin:3px 0 0}.ramp{margin:4px 0;height:8px}
+ #ledger{left:8px;top:8px;max-width:calc(100% - 16px);padding:6px 10px;font-size:13px;pointer-events:none}#ledger small{font-size:11px;margin-top:2px}
+ .actions{flex-wrap:wrap}.actions label{min-height:44px}#status{margin:8px 0}#summary h2{font-size:17px}
+}
+/* Permanent scale disclosure stays readable even before a route is loaded. */
+#legend #model-scale{font-size:12px;line-height:1.5;margin:8px 0 0;color:#fff}
+#model-scale span{white-space:nowrap}
+#legend-toggle{display:none}
+.itinerary-leg+ .itinerary-leg{margin-top:12px}.itinerary-leg{border-bottom:1px solid #375060;padding:8px 0}#itinerary-total{font-weight:700;color:#70e1d5}
+/* Presenter surface: one primary action, secondary controls in one disclosure. */
+header{height:64px}header h1{margin:0}main{height:calc(100dvh - 64px);grid-template-columns:minmax(0,1fr) 380px}
+.primary-actions{display:flex;align-items:center;gap:14px}.primary-actions #plan{flex:1;width:auto;margin-top:4px}.primary-actions label,.roundtrip{display:flex;align-items:center;gap:6px;min-height:36px;flex-shrink:0}.roundtrip small{font-size:11px}
+#status{line-height:1.5;overflow-wrap:break-word}#ledger{max-width:calc(100% - 32px);width:max-content;left:16px;padding:9px 12px;font-size:15px;line-height:1.5;pointer-events:none}#ledger small{font-size:12px;white-space:normal}
+#summary{padding-top:0}.itinerary-leg{padding:10px 0}#summary h2{font-size:16px;margin-bottom:8px}#summary dl{grid-template-columns:1fr auto 1fr auto;font-size:12px;gap:6px 8px}#summary p{font-size:12px;line-height:1.5;margin:8px 0}#summary #itinerary-total{font-size:14px}
+#details{margin-top:14px;border-top:1px solid #375060}#details>summary{cursor:pointer;padding:12px 0;min-height:44px;color:#b6cbd7}#details p{font-size:12px;line-height:1.6}#details .actions{flex-wrap:wrap}#details button{padding:6px 10px}#error:empty{display:none}
+@media(max-width:700px){header{height:58px}main{height:calc(100dvh - 58px)}#map{height:40%;min-height:270px}aside{padding-top:10px}#ledger{left:8px;max-width:calc(100% - 16px);padding:6px 10px;font-size:13px}#ledger small{font-size:11px}.roundtrip{margin:5px 0}.primary-actions label{min-height:44px}#summary dl{gap:6px;font-size:12px}}
+@media(max-width:700px){
+ #legend{width:calc(100% - 16px);padding:0;pointer-events:auto;z-index:2}
+ #legend-toggle{display:block;width:100%;min-height:32px;padding:5px 8px;background:transparent;border:0;text-align:left;white-space:nowrap;font-size:12px}
+ #legend-body{display:none;padding:4px 10px 10px}#legend.expanded #legend-body{display:block}
+ #ledger{top:auto;bottom:48px;left:8px;max-width:calc(100% - 16px)}
+}
+#panel-toggle,#desktop-strip{display:none}
+@media(min-width:701px){
+ #panel-toggle{display:block;min-height:36px;padding:5px 10px;margin-left:16px}header #time{margin-left:auto}
+ main{grid-template-columns:minmax(0,1fr) 320px}
+ .panel-collapsed main{grid-template-columns:1fr;grid-template-rows:52px minmax(0,1fr)}
+ .panel-collapsed aside{display:none}
+ .panel-collapsed #desktop-strip{display:flex;align-items:center;gap:12px;padding:4px 16px;border-bottom:1px solid #375060}
+ #desktop-strip #ledger{position:static;max-width:none;min-width:0;flex:1;border:0;padding:0;font-size:13px;white-space:nowrap;background:transparent}
+ #desktop-strip #ledger small{display:inline;margin-left:12px;font-size:12px}
+ #desktop-strip #plan{width:auto;margin:0;min-height:36px}
+ #desktop-strip #play{min-height:36px}
+ .panel-collapsed #legend{bottom:8px;left:8px;width:300px;padding:0}
+ .panel-collapsed #legend-toggle{display:block;width:100%;min-height:32px;padding:5px 8px;background:transparent;border:0;text-align:left;white-space:nowrap;font-size:12px}
+ .panel-collapsed #legend-body{display:none}
+}
