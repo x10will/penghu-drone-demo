@@ -1,0 +1,20 @@
+/* Reusable two-state sheet: button + scroll body; desktop is ordinary content. */
+[data-sheet-toggle]{display:none}
+@media(max-width:700px){
+ [data-bottom-sheet]{position:fixed;inset:auto 0 0;z-index:5;height:var(--sheet-peek,44px);padding:0;border:1px solid #486878;border-bottom:0;border-radius:14px 14px 0 0;background:#0c1b26f5;overflow:hidden;box-shadow:0 -3px 16px #0003}
+ [data-bottom-sheet][data-expanded="true"]{height:var(--sheet-height,66dvh)}
+ [data-sheet-toggle]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:100%;height:var(--sheet-peek,44px);min-height:44px;padding:5px 12px;border:0;border-radius:0;background:transparent;color:#e9f1f5;cursor:pointer}
+ [data-sheet-toggle]::before{content:"";width:32px;height:3px;border-radius:3px;background:#8ba6b5;flex-shrink:0}
+ [data-sheet-summary]{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:16px;text-align:left}
+ [data-sheet-body]{height:calc(100% - var(--sheet-peek,44px));overflow:auto;overscroll-behavior:contain;padding:4px 14px 16px}
+ [data-bottom-sheet][data-expanded="false"] [data-sheet-body]{visibility:hidden}
+}
+/* Penghu shell adapter. Lift the rules above with the controller for another app. */
+@media(max-width:700px){
+ body{overflow:hidden}header{height:48px}header h1{font-size:15px}#time{font-size:24px}
+ main{position:relative;display:block;height:calc(100dvh - 48px);--sheet-offset:44px}
+ main:has([data-bottom-sheet][data-expanded="true"]){--sheet-offset:66dvh}
+ #map{position:absolute;inset:0;height:100%;min-height:0}
+ #ledger{display:none}
+ #legend-toggle{min-height:28px;font-size:11px;padding:4px 8px}
+}

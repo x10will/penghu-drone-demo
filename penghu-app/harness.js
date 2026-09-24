@@ -1,3 +1,5 @@
+import {createBottomSheet} from './bottom-sheet.mjs';
+import {initMapCredit} from './attribution.mjs';
 import {loadField,plan} from './planner.mjs';
 import {connectEmbed} from './embed-transport.js';
 import {safetyCost,makeItinerary,returnRequest,TURNAROUND_MIN,RETURN_LATEST} from './timeline.mjs';
@@ -5,6 +7,10 @@ const $=id=>document.getElementById(id),state={ready:false,online:false,route:nu
 let fieldLoadError=null;
 let pendingLeg=null,wantsReturn=false,field=null,serial=0,pending=null;
 let actionUnlockAt=0,actionTimer,flightStarted=false;
+const phoneSheet=createBottomSheet($('route-panel'));
+const disposeCredit=initMapCredit(document.querySelector('.map-credit'),$('map'),$('viewer'));
+const peekObserver=new MutationObserver(()=>phoneSheet.setSummary(!$('ledger').hidden ? [...$('ledger').childNodes].map(n=>n.textContent).join(' ') : $('status').textContent));
+for(const id of ['status','ledger'])peekObserver.observe($(id),{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['hidden']});
 // Move original controls without replacing their state or event handlers.
 const desktop=matchMedia('(min-width:701px)');let panelCollapsed=false;
 const chevron=document.createElement('button');chevron.id='panel-toggle';chevron.type='button';document.querySelector('header').append(chevron);
@@ -14,12 +20,18 @@ function setPanelCollapsed(value){
  panelCollapsed=desktop.matches&&value;document.body.classList.toggle('panel-collapsed',panelCollapsed);
  chevron.textContent=panelCollapsed?'‹ 展開面板':'› 收合面板';chevron.setAttribute('aria-expanded',String(!panelCollapsed));
  for(const {element,anchor}of anchors)if(panelCollapsed)strip.append(element);else anchor.after(element);
- const doc=$('viewer').contentDocument;if(doc?.head){let style=doc.getElementById('penghu-desktop-nav');if(!style){style=doc.createElement('style');style.id='penghu-desktop-nav';doc.head.append(style);}style.textContent=panelCollapsed?'#dt-embed-navigation,#viewpoints{display:none!important}':'';}
+ const doc=$('viewer').contentDocument;if(doc?.head){let style=doc.getElementById('penghu-desktop-nav');if(!style){style=doc.createElement('style');style.id='penghu-desktop-nav';doc.head.append(style);}style.textContent=panelCollapsed?'#dt-embed-navigation,#viewpoints{display:none!important}':`@media(max-width:700px){
+ html.dt-embed #dt-embed-navigation{top:8px!important;right:8px!important;gap:4px!important}
+ html.dt-embed #dt-embed-navigation button{min-height:32px!important;min-width:32px!important;padding:3px 6px!important;font-size:12px!important}
+ html.dt-embed #dt-embed-navigation #viewpoints{gap:4px!important;flex-direction:row!important;width:auto!important}
+ html.dt-embed #dt-embed-navigation #viewpoints>.vp-btn{width:auto!important;flex:0 0 auto!important;min-width:0!important;min-height:28px!important;padding:2px 6px!important;font-size:10px!important}
+ html.dt-embed #dt-embed-navigation #mobile-compass[hidden]{display:none!important}
+ }`;}
 }
 chevron.addEventListener('click',()=>setPanelCollapsed(!panelCollapsed));desktop.addEventListener('change',()=>setPanelCollapsed(false));$('viewer').addEventListener('load',()=>setPanelCollapsed(panelCollapsed));setPanelCollapsed(false);
 const map=connectEmbed($('viewer'),(name,p)=>{
  if(name==='twin:ready'){state.ready=true;$('status').textContent=fieldLoadError||'場域已就緒';$('play').disabled=$('hour').disabled=false;refresh();}
- if(name==='twin:clock'){state.clock=p;const m=Math.floor(p.hour*60);$('time').textContent=`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;$('hour').value=p.hour;$('play').textContent=(desktop.matches?p.mode!=='paused':p.mode==='playing')?'暫停':'播放';}
+ if(name==='twin:clock'){state.clock=p;const m=Math.floor(p.hour*60);$('time').textContent=`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;$('hour').value=p.hour;$('play').textContent=(p.mode!=='paused')?'暫停':'播放';}
  if(name==='twin:route-ready'&&state.itinerary&&p.requestId===state.response?.request_id){state.routeReady=true;state.action='fly';refresh();$('status').textContent='航線已提出 — 請目視確認';}
  if(name==='twin:flight'&&state.itinerary&&p.requestId===state.response?.request_id){
   if(state.action==='reset'&&state.clock?.mode==='flying'){flightStarted=true;refresh();}
@@ -55,7 +67,7 @@ function onResponse(r){
 }
 function refresh(){const label={plan:'規劃航線',loading:'規劃航線',fly:'模擬飛行',reset:'重設'}[state.action];if($('plan').textContent!==label){actionUnlockAt=performance.now()+800;clearTimeout(actionTimer);actionTimer=setTimeout(refresh,810);}$('plan').textContent=label;$('plan').disabled=performance.now()<actionUnlockAt||state.action==='loading'||(state.action==='reset'&&!flightStarted)||(state.action==='plan'&&!(state.ready&&state.online));$('replay').disabled=!state.routeReady;}
 function clear(){setPanelCollapsed(false);pendingLeg=null;state.route=null;state.itinerary=null;state.returnResponse=null;state.flight=null;state.routeReady=false;state.action='plan';$('ledger').hidden=true;$('follow').checked=$('tail').checked=false;$('rationale').replaceChildren();map.command('twin:clear',{});refresh();}
-function fly(){if(!state.routeReady)return;flightStarted=false;state.action='reset';refresh();setPanelCollapsed(true);map.command('twin:fly',{frameRoute:desktop.matches});}
+function fly(){if(!state.routeReady)return;flightStarted=false;state.action='reset';refresh();setPanelCollapsed(true);phoneSheet.collapse();map.command('twin:fly',{frameRoute:desktop.matches});}
 function reset(){clear();if(desktop.matches)map.command('twin:view-reset',{});pending=null;state.response=null;$('route-form').reset();$('from').value='N04';$('to').value='N05';$('rate').value='1';$('details').open=false;$('summary').hidden=true;$('error').textContent='';$('status').textContent='場域已就緒';map.command('twin:clock',{hour:0,playing:true,rate:1});}
 function deliver(){
  pendingLeg=null;
@@ -89,7 +101,7 @@ $('plan').addEventListener('click',()=>{if($('plan').disabled||performance.now()
 for(const id of ['from','to','earliest','latest','roundtrip'])$(id).addEventListener('input',()=>{if(state.route||pendingLeg||state.action!=='plan'||!$('summary').hidden){clear();pending=null;$('summary').hidden=true;$('status').textContent='行程已變更 · 請重新規劃';}});
 $('replay').addEventListener('click',fly);
 for(const [id,other,mode]of [['follow','tail','center'],['tail','follow','tail']])$(id).addEventListener('change',()=>{if($(id).checked)$(other).checked=false;map.command('twin:follow',{enabled:$(id).checked,mode});});
-$('play').addEventListener('click',()=>map.command('twin:clock',{playing:desktop.matches?state.clock?.mode==='paused':state.clock?.mode!=='playing'}));
+$('play').addEventListener('click',()=>map.command('twin:clock',{playing:state.clock?.mode==='paused'}));
 $('hour').addEventListener('input',()=>map.command('twin:clock',{hour:Number($('hour').value),playing:false}));
 $('rate').addEventListener('change',()=>map.command('twin:clock',{rate:Number($('rate').value)}));
 const meta=await fetch(new URL('../data/danger_frames/danger_meta.json',import.meta.url)).then(r=>r.json());
@@ -98,4 +110,4 @@ for(const id of ['from','to'])for(const pad of meta.pads){const option=document.
 loadField(meta,new URL('../data/danger_frames/router_field.bin',import.meta.url)).then(f=>{field=f;state.online=true;refresh();},error=>{fieldLoadError=`航線資料載入失敗：${error.message}`;state.online=false;$('status').textContent=$('error').textContent=fieldLoadError;refresh();});
 $('from').value='N04';$('to').value='N05';const viewerURL=new URL('../viewer/docs/viewer-3d/index.html',import.meta.url);viewerURL.search=new URLSearchParams({site:'penghu',embed:'1',ext:new URL('./penghu-layers.js',import.meta.url).pathname});$('viewer').src=viewerURL.href;
 window.traverse={state,command:map.command};
-window.addEventListener('pagehide',()=>map.dispose(),{once:true});
+window.addEventListener('pagehide',()=>{peekObserver.disconnect();phoneSheet.destroy();disposeCredit();map.dispose();},{once:true});

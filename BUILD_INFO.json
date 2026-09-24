@@ -1,6 +1,6 @@
 {
-  "built_at": "2026-09-24T15:04:33+00:00",
-  "penghu_drone_commit": "36acf3fc8e80064efdf18206646f1dc96610f207",
+  "built_at": "2026-09-24T16:46:50+00:00",
+  "penghu_drone_commit": "47f937deeb39da08157bf3c726b60921bb226d80",
   "penghu_drone_dirty": false,
   "dt_tourism": {
     "commit": "c8364729db5fae7298990f50230eb76304696887",
@@ -10,6 +10,6 @@
       "@mkkellogg/gaussian-splats-3d": "0.4.7"
     }
   },
-  "files": 93,
-  "bytes": 20589379
+  "files": 96,
+  "bytes": 20601092
 }

@@ -1,5 +1,7 @@
+import {initMapCredit} from './attribution.mjs';
 // Field-only integration surface; no route form, WebSocket client or drone.
 const iframe=document.getElementById('viewer'),time=document.getElementById('time'),slider=document.getElementById('hour'),play=document.getElementById('play');
+const disposeCredit=initMapCredit(document.querySelector('.map-credit'),document.querySelector('main'),document.getElementById('viewer'));
 const state={ready:null,clock:null,coverage:null,errors:[]};
 function send(type,payload){iframe.contentWindow.postMessage({channel:'panel-core.map',version:1,type,payload},location.origin);}
 function command(name,payload){if(!state.ready)throw new Error('Extension not ready');send('appCommand',{name,payload});}
@@ -28,4 +30,4 @@ viewerURL.search=new URLSearchParams({site:'penghu',embed:'1',ext:new URL('./pen
 play.addEventListener('click',()=>command('twin:clock',{playing:state.clock?.mode!=='playing'}));
 slider.addEventListener('input',()=>command('twin:clock',{hour:Number(slider.value),playing:false}));
 window.fieldPreview={state,command,flyTo:target=>send('flyTo',{target})};
-window.addEventListener('pagehide',()=>window.removeEventListener('message',receive),{once:true});
+window.addEventListener('pagehide',()=>{disposeCredit();window.removeEventListener('message',receive);},{once:true});

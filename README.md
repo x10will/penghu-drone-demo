@@ -40,10 +40,14 @@ The same files work at the domain root or under any project subdirectory.
   the GLB. The model bytes are unchanged; the app changes display scale, orientation
   and position. Keep this credit, source and license link when redistributing.
 
-Required map credit: **© OpenStreetMap contributors · 內政部 20 m DTM (OGDL 1.0)**.
-The app and field preview display linked data and model credits in a permanent
-strip below the map, independent of the viewer's hidden embed HUD. The strip
-wraps on narrow screens and reserves its own space outside the map controls.
+Required map credit follows the [OSMF interactive-map attribution guidance](https://osmfoundation.org/wiki/Licence/Attribution_Guidelines#Interactive_maps).
+On both app pages, a linked **© OpenStreetMap** notice appears in the bottom-right
+map corner without interaction on load; DTM/model text accompanies it when it
+fits on one line. After five seconds or the first map interaction it collapses
+to an **ⓘ** button. The button opens the full linked OSM/ODbL, DTM/OGDL 1.0 and
+CesiumDrone/CC BY 4.0 credits. Close with ✕, Escape or a tap outside. This pattern
+is the same on phones and desktop, respects reduced motion and reserves no
+layout row. Credits remain separate from the legend, controls and sheet peek.
 
 ## Third-party code
 

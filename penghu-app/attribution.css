@@ -1,9 +1,32 @@
-/* Reserve a row below the map so credits never obscure its controls or legend. */
-.credited-map{display:grid;grid-template-rows:minmax(0,1fr) auto}
-.map-viewport{position:relative;min-width:0;min-height:0}
+/* Fine print overlays the map; it never contributes a layout row. */
+.credited-map,.map-viewport{position:relative;min-width:0;min-height:0}
+.map-viewport{height:100%}
 .map-viewport>iframe{display:block}
-.map-credit{padding:4px 8px;border-top:1px solid #375060;background:#0c1b26;color:#a9bfcc;font:10px/1.5 system-ui,sans-serif;text-align:right;overflow-wrap:anywhere}
-.map-credit span{display:inline}
+.map-overlays{display:contents}
+/* Both widths use the same initial notice, button and anchored disclosure. */
+.map-credit{position:absolute;right:4px;bottom:4px;z-index:3;max-width:100%;color:#d8e4eb;font:10px/1.4 system-ui,sans-serif;pointer-events:auto}
+.map-credit [hidden]{display:none!important}
+.credit-bar{display:flex;align-items:center;justify-content:flex-end;gap:4px;max-width:100%}
+.credit-intro{min-width:0;padding:3px 4px;background:#0c1b26de;border-radius:3px;white-space:nowrap}
 .map-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
-.map-credit a:hover,.map-credit a:focus-visible{color:#e9f1f5}
-@media(max-width:700px){.map-credit{text-align:left}}
+.map-credit a:hover,.map-credit a:focus-visible{color:#fff}
+.map-credit .credit-toggle,.map-credit .credit-close{flex-shrink:0;width:32px;min-width:32px;height:32px;min-height:32px;padding:0;border:1px solid #58798a;border-radius:5px;background:#0c1b26ed;color:#e9f1f5;cursor:pointer;font-size:18px;line-height:1}
+.credit-full{width:330px;max-width:100%;padding:6px;margin-bottom:4px;background:#0c1b26f5;border:1px solid #58798a;border-radius:5px;overflow-wrap:anywhere}
+.credit-close{float:right;margin:0 0 3px 6px}
+.map-credit[data-credit-state="open"] .credit-full,.map-credit[data-credit-state="collapsed"] .credit-toggle{animation:credit-fade .15s ease-out}
+@keyframes credit-fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.map-credit[data-credit-state] .credit-full,.map-credit[data-credit-state] .credit-toggle{animation:none}}
+#legend,.panel-collapsed #legend{bottom:32px}
+@media(min-width:701px){
+ .map-overlays{position:absolute;inset:auto 4px 4px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:3;pointer-events:none}
+ .map-overlays>#legend,.map-overlays>aside{position:static;align-self:flex-start;margin-left:16px;pointer-events:auto}
+ .panel-collapsed .map-overlays>#legend{margin-left:4px}
+ .map-overlays>aside{margin-left:8px}
+ .map-credit{position:static;pointer-events:auto}
+}
+@media(max-width:700px){
+ .map-overlays{position:absolute;left:8px;right:8px;bottom:calc(var(--sheet-offset,0px) + 4px);z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+ .map-credit{position:static;max-width:100%;text-align:left}
+ #legend{position:static;width:auto;max-width:100%;padding:0}
+ .map-overlays>aside{position:static;width:100%;max-width:330px;padding:12px;margin:0}
+}
