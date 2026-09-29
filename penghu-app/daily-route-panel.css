@@ -1,0 +1,33 @@
+.panel-core-app .panel-body:has(.daily-trial-panel){padding:0}
+.daily-trial-panel{padding:12px;font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;color:#e3eeee}
+.daily-trial-panel p{margin:8px 0}
+.daily-trial-panel .trial-intro{padding:7px 9px;border-radius:6px;background:#193d3e;color:#d7fff7;font-weight:700}
+.daily-trial-panel .trial-mock-note{color:#a9c7ca;font-size:11px}
+.trial-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}
+.trial-field{display:grid;gap:4px;min-width:0;color:#aec7cd;font-size:11px}
+.trial-field select,.trial-field input{box-sizing:border-box;width:100%;min-width:0;min-height:36px;font-size:12px}
+.trial-check{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-height:34px;color:#dcefed;font-size:12px}
+.trial-check input{width:17px;height:17px;accent-color:#64d5c8}
+.trial-submit{grid-column:1/-1;min-height:38px;background:#245c5d;color:#effffa}
+.trial-status,.trial-clock{display:block;font-size:11px;color:#afd5d3}
+.trial-clock{font-variant-numeric:tabular-nums}
+.trial-live{display:block;margin:5px 0;padding:7px 8px;border-radius:6px;background:#173d47;color:#e0faf2;font-size:11px;font-variant-numeric:tabular-nums}
+.trial-live:empty{display:none}
+.trial-controls{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.trial-controls button{min-height:34px;font-size:11px}
+.trial-result{display:grid;gap:10px}
+.trial-route{padding:10px;border:1px solid #365e66;border-radius:8px;background:#102e39}
+.trial-route h3{margin:0 0 8px;color:#e4fff9;font-size:13px}
+.trial-route h4{margin:12px 0 5px;color:#a7e8df;font-size:11px}
+.trial-facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;margin:0;font-size:11px}
+.trial-facts dt{color:#a8c4cc}
+.trial-facts dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.trial-legs,.trial-waits{margin:0;padding-left:19px;font-size:11px}
+.trial-legs li,.trial-waits li{margin:4px 0}
+.trial-rationale{color:#c8e8e3;font-size:11px}
+.trial-turnaround,.trial-total{padding:6px 8px;border-radius:5px;background:#19434a;font-size:11px}
+.trial-return-warning{padding:8px;border-left:3px solid #e7ae78;background:#49382f;color:#ffdbc0;font-size:12px}
+.trial-refusal{padding:8px;border-left:3px solid #e7ae78;background:#49382f;color:#ffdbc0;font-size:12px}
+.daily-hazard-legend [data-kind=very-high]:before{background:#7d1128}
+.daily-hazard-legend [data-kind=land]:before{background:rgba(190,211,226,.18)}
+@media(max-width:700px){.daily-trial-panel{padding:9px}.trial-form{gap:7px}}

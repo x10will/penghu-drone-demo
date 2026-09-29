@@ -3,6 +3,7 @@ import {ScenarioClock} from './scenario-clock.mjs';
 import {frameLerp} from './timeline.mjs';
 import {cellStyle,sampledGrid,HATCH_MARGIN} from './field-math.mjs';
 import {labelWorldHeight} from './display-math.mjs';
+import {FollowCamera} from './follow-camera.mjs';
 
 const PAINT_MS=50, CELL_PX=8;
 
@@ -11,7 +12,8 @@ export default async function setup(api) {
   const loader=new FieldFrames(new URL('../data/danger_frames/danger',import.meta.url).href);
   let disposed=false,mesh,texture,geometry,material,meta,canvas,ctx,lastTime=null,elapsed=0,busy=false,epoch=0,paints=0;
   const off=[];
-  let actor=null,follow=false,followMode='center',followPosition=null,tailHeading=null,routeEpoch=0;
+  let actor=null,follow=false,followMode='center',routeEpoch=0;
+  const followCamera=new FollowCamera(api);
   const emit=(name,payload)=>{if(!disposed)api.appEvent(name,payload);};
   const fail=error=>{if(!disposed&&error.name!=='AbortError')emit('twin:error',{message:error.message});};
   const cleanup=()=>{
@@ -34,7 +36,7 @@ export default async function setup(api) {
       if(s.o.material.visible)occupied.push(r);
     }
   }
-  const gesture=()=>{if(follow){follow=false;followPosition=null;emit('twin:follow-paused',{});}};
+  const gesture=()=>{if(follow){follow=false;followCamera.reset();emit('twin:follow-paused',{});}};
   for(const name of ['pointerdown','touchstart','wheel']){document.addEventListener(name,gesture,{passive:true});off.push(()=>document.removeEventListener(name,gesture));}
   window.addEventListener('keydown',gesture,true);off.push(()=>window.removeEventListener('keydown',gesture,true));
 
@@ -42,30 +44,7 @@ export default async function setup(api) {
     const progress=actor?.sync(clock.snapshot().hour,delta,follow&&followMode==='tail');if(!progress)return;
     if(follow){
       const position=actor.drone.position;
-      if(followMode==='tail'){
-        // Heading is clockwise from north in the viewer's local Z-up frame.
-        if(tailHeading===null)tailHeading=progress.headingRad;
-        const turn=Math.atan2(Math.sin(progress.headingRad-tailHeading),Math.cos(progress.headingRad-tailHeading));
-        const dt=Math.max(0,delta),filteredTurn=turn*(1-Math.exp(-dt/800));
-        // Bound large heading reversals as well as ordinary grid-corner jitter.
-        const maxTurn=70*Math.PI/180*dt/1000;
-        tailHeading+=Math.max(-maxTurn,Math.min(maxTurn,filteredTurn));
-        const dx=Math.sin(tailHeading),dy=Math.cos(tailHeading);
-        const eye=[position.x-12*dx,position.y-12*dy,position.z+4];
-        const target=[position.x+2*dx,position.y+2*dy,position.z];
-        if(api.setCameraPose?.(eye,target)!==true){gesture();fail(new Error('Viewer tail camera pose is unavailable or outside camera limits'));}
-      }else{
-        if(!followPosition){
-          // Center once using the public camera's view ray at actor altitude.
-          // No access to the viewer's private orbit target or controls.
-          const direction=api.camera.getWorldDirection(new THREE.Vector3());
-          const distance=(position.z-api.camera.position.z)/direction.z;
-          followPosition=Number.isFinite(distance)&&distance>0?api.camera.position.clone().addScaledVector(direction,distance):position.clone();
-        }
-        const movement=position.clone().sub(followPosition);
-        if(api.translateCameraTarget?.(movement.x,movement.y,movement.z)!==true){gesture();fail(new Error('Viewer camera translation is unavailable'));}
-        else followPosition=position.clone();
-      }
+      try{followCamera.sync(position,progress.headingRad,delta,followMode);}catch(error){gesture();fail(error);}
       api.camera.updateMatrixWorld();const v=position.clone().project(api.camera);progress.screen={x:v.x,y:v.y,z:v.z,inView:Math.abs(v.x)<=1&&Math.abs(v.y)<=1&&v.z>=-1&&v.z<=1};
       const aim=api.camera.getWorldDirection(new THREE.Vector3());progress.cameraYawRad=Math.atan2(aim.x,aim.y);
     }
@@ -109,7 +88,7 @@ export default async function setup(api) {
     if(disposed)return;
     if(name==='twin:view-reset'){if(api.setCameraPose(api.site.cameraPosition,[0,0,api.site.cameraTargetZ??0])!==true)fail(new Error('無法還原預設視角'));return;}
     if(name==='twin:clear'){routeEpoch++;epoch++;busy=false;actor?.dispose();actor=null;follow=false;clock.setClock({playing:true});elapsed=0;lastTime=null;return;}
-    if(name==='twin:follow'){follow=!!payload.enabled;followMode=payload.mode==='tail'?'tail':'center';followPosition=null;tailHeading=null;syncActor();return;}
+    if(name==='twin:follow'){follow=!!payload.enabled;followMode=payload.mode==='tail'?'tail':'center';followCamera.reset();syncActor();return;}
     if(name==='twin:route'){
       const token=++routeEpoch,clockToken=++epoch;actor?.dispose();actor=null;busy=true;
       let next;

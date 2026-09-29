@@ -1,0 +1,93 @@
+// All locations, demand, handling times and performance values are mock data.
+// N04/N05 are geographic anchors only, not asserted vaccine/drone facilities.
+export const BASELINE_FIXTURE = {
+  id: 'penghu-vaccine-day-2026-09-29',
+  label: '今日疫苗配送計畫（模擬資料）',
+  date: '2026-09-29',
+  timezone: 'Asia/Taipei',
+  startMin: 8 * 60,
+  endMin: 18 * 60,
+  assumptions: [
+    '所有訂單、批次、車輛性能、服務時間與溫控參數均為模擬資料。',
+    '馬公收貨冷庫、馬公市第一衛生所及道路線形是示意位置；N04/N05 僅作模擬交接點的地理錨點。',
+    '馬公至七美航線及速度是合成情境，並非當日觀測天氣或核准飛行路線。',
+    '上游運輸不在本次模型內；09:00 批次於馬公收貨冷庫完成放行。',
+    '模擬冷庫有分裝與裝車兩個獨立作業位，可同時作業；本日兩筆訂單於出車前已分別標記。',
+    'D-01 在七美交接後需要另行回收；本日計畫不含回程飛行。',
+  ],
+  sites: [
+    { id: 'depot', label: '馬公模擬收貨冷庫', kind: 'mock-depot', lat: 23.5678, lng: 119.5672 },
+    { id: 'magong-clinic', label: '馬公市第一衛生所（示意）', kind: 'health-center', lat: 23.5718, lng: 119.5780 },
+    { id: 'magong-transfer', label: '馬公模擬轉運點（N04 錨點）', kind: 'mock-transfer', lat: 23.5626, lng: 119.5647 },
+    { id: 'qimei-transfer', label: '七美模擬轉運點（N05 錨點）', kind: 'mock-transfer', lat: 23.1946, lng: 119.4190 },
+    { id: 'qimei-clinic', label: '七美鄉衛生所', kind: 'health-center', lat: 23.2041, lng: 119.4309 },
+  ],
+  resources: [
+    { id: 'V-01', label: 'V-01 馬公配送車', type: 'van', initialSiteId: 'depot',
+      initialEnergyWh: 8000, reserveWh: 500, capacityKg: 20, capacityL: 30,
+      mockProfile: { idleW: 18, handlingW: 35, movingW: 65, travelWhPerKm: 85 } },
+    { id: 'D-01', label: 'D-01 七美配送無人機', type: 'drone', initialSiteId: 'magong-transfer',
+      initialEnergyWh: 1100, reserveWh: 200, capacityKg: 3, capacityL: 5,
+      mockProfile: { idleW: 3, handlingW: 8, movingW: 25, travelWhPerKm: 12 } },
+    { id: 'V-02', label: 'V-02 七美接駁車', type: 'van', initialSiteId: 'qimei-clinic',
+      initialEnergyWh: 3500, reserveWh: 300, capacityKg: 8, capacityL: 12,
+      mockProfile: { idleW: 14, handlingW: 30, movingW: 55, travelWhPerKm: 90 } },
+  ],
+  orders: [
+    { id: 'ORD-MAGONG', label: '馬公市第一衛生所', destinationId: 'magong-clinic',
+      quantity: 80, massKg: 2.4, volumeL: 3.2, deadlineMin: 11 * 60,
+      receivingWindow: [9 * 60, 13 * 60], priority: 'routine' },
+    { id: 'ORD-QIMEI', label: '七美鄉衛生所', destinationId: 'qimei-clinic',
+      quantity: 40, massKg: 1.2, volumeL: 1.6, deadlineMin: 12 * 60,
+      receivingWindow: [9 * 60 + 30, 14 * 60], priority: 'island' },
+  ],
+  batch: {
+    id: 'MOCK-BATCH-0929', label: '模擬冷鏈疫苗批次', source: '臺灣本島供應（上游情境）',
+    quantity: 200, availableAtMin: 9 * 60, initialTemperatureC: 4.4,
+    upstreamHistory: [
+      { timeMin: 8 * 60, celsius: 4.2 },
+      { timeMin: 8 * 60 + 30, celsius: 4.3 },
+      { timeMin: 9 * 60, celsius: 4.4 },
+    ],
+  },
+  routes: [
+    { id: 'road-depot-origin', mode: 'road', fromSiteId: 'depot', toSiteId: 'magong-transfer',
+      speedKph: 20, path: [{ lat: 23.5678, lng: 119.5672 }, { lat: 23.5656, lng: 119.5668 }, { lat: 23.5626, lng: 119.5647 }] },
+    { id: 'road-origin-depot', mode: 'road', fromSiteId: 'magong-transfer', toSiteId: 'depot',
+      speedKph: 20, path: [{ lat: 23.5626, lng: 119.5647 }, { lat: 23.5656, lng: 119.5668 }, { lat: 23.5678, lng: 119.5672 }] },
+    { id: 'road-depot-magong', mode: 'road', fromSiteId: 'depot', toSiteId: 'magong-clinic',
+      speedKph: 24, path: [{ lat: 23.5678, lng: 119.5672 }, { lat: 23.5692, lng: 119.5715 }, { lat: 23.5718, lng: 119.5780 }] },
+    { id: 'road-qimei-approach', mode: 'road', fromSiteId: 'qimei-clinic', toSiteId: 'qimei-transfer',
+      speedKph: 24, path: [{ lat: 23.2041, lng: 119.4309 }, { lat: 23.2001, lng: 119.4255 }, { lat: 23.1946, lng: 119.4190 }] },
+    { id: 'road-qimei-delivery', mode: 'road', fromSiteId: 'qimei-transfer', toSiteId: 'qimei-clinic',
+      speedKph: 24, path: [{ lat: 23.1946, lng: 119.4190 }, { lat: 23.2001, lng: 119.4255 }, { lat: 23.2041, lng: 119.4309 }] },
+    { id: 'synthetic-air-qimei', mode: 'air', fromSiteId: 'magong-transfer', toSiteId: 'qimei-transfer',
+      speedKph: 82, cruiseAltitudeM: 120, path: [{ lat: 23.5626, lng: 119.5647 }, { lat: 23.3786, lng: 119.4918 }, { lat: 23.1946, lng: 119.4190 }] },
+  ],
+  profile: {
+    id: 'mock-cold-vaccine-passive-box-v1',
+    label: '模擬 2–8°C 冷藏疫苗／被動保冷箱 v1',
+    temperatureBoundsC: [2, 8],
+    sampleEveryMin: 10,
+    // Newton cooling: T(t)=ambientC+(T0-ambientC)*exp(-t/tauMin).
+    // Handover and receiving exposures stay with the outgoing custodian until completion.
+    thermal: {
+      depotCold: { ambientC: 4.2, tauMin: 40 },
+      packing: { ambientC: 7.2, tauMin: 80 },
+      handling: { ambientC: 9.5, tauMin: 90 },
+      vanCold: { ambientC: 5.0, tauMin: 55 },
+      droneBox: { ambientC: 10.0, tauMin: 130 },
+      transferWait: { ambientC: 10.0, tauMin: 130 },
+      receiving: { ambientC: 8.5, tauMin: 75 },
+      clinicCold: { ambientC: 4.4, tauMin: 40 },
+    },
+  },
+  plan: {
+    sequence: ['ORD-QIMEI', 'ORD-MAGONG'],
+    v02ApproachStartMin: 9 * 60 + 50,
+    durationsMin: {
+      packQimei: 12, packMagong: 10, loadQimei: 8, loadMagong: 7,
+      handoverOrigin: 6, handoverQimei: 8, receiveQimei: 10, receiveMagong: 10,
+    },
+  },
+};

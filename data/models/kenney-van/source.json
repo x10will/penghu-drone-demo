@@ -1,0 +1,16 @@
+{
+  "name": "Kenney Car Kit van",
+  "version": "3.1",
+  "creator": "Kenney",
+  "license": "CC0-1.0",
+  "source": "https://kenney.nl/assets/car-kit",
+  "archive": "https://kenney.nl/media/pages/assets/car-kit/1a312ec241-1775131960/kenney_car-kit.zip",
+  "retrieved": "2026-09-29",
+  "archiveSha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+  "files": {
+    "van.glb": "ed4ed56e8e5ed98db050af09ed2062b3b6bb7b93eab1e563cb6774b387b233a1",
+    "Textures/colormap.png": "f3622a03a20c6696065cae9cbe391351be873508af190c2ebd1d420c055787a5",
+    "License.txt": "c33b7f6453d134deae7b1b8493717d9ccfa754c25ab97f6de89b88f8fda19b00"
+  },
+  "changes": "Unmodified model and texture. Runtime scale is a representative 5 m van; refrigeration and resource characteristics come from the mock fixture."
+}

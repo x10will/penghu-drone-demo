@@ -76,19 +76,15 @@ function install() {
   }
 
   function flyTo({ target } = {}) {
-    // The vendored client also validates the legacy string form {target: "id"}.
-    if (typeof target === 'string') target = { id: target };
     if (!target || typeof target !== 'object' || Array.isArray(target)) return;
-    // Client precedence (map-client.js): a string id wins and any coordinates
-    // beside it are ignored; only a target without a string id is lon/lat.
-    if (typeof target.id === 'string') {
+    if (typeof target.id === 'string' && target.lon === undefined && target.lat === undefined && target.alt === undefined) {
       const objects = objectsForId(target.id);
       if (objects.length) frameObjects(objects);
       else if (dt.goto.edgeEntries.some(entry => entry.id === target.id)
           || window.smlViewerRuntime?.getElement(target.id)) dt.gotoTwin(target.id);
       return;
     }
-    if (!Number.isFinite(target.lon) || !Number.isFinite(target.lat)
+    if (target.id !== undefined || !Number.isFinite(target.lon) || !Number.isFinite(target.lat)
         || Math.abs(target.lon) > 180 || Math.abs(target.lat) > 90
         || (target.alt !== undefined && !Number.isFinite(target.alt))) return;
     const [x, y] = dt.geoToLocal(target.lat, target.lon);

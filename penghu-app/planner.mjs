@@ -25,8 +25,8 @@ export function fieldFromArtifact(meta, buffer) {
     hours: Array.from({length: nFrames}, (_, i) => i * meta.frame_minutes / 60)};
 }
 
-export async function loadField(meta, url) {
-  const response = await fetch(url);
+export async function loadField(meta, url, {signal} = {}) {
+  const response = await fetch(url, {signal});
   if (!response.ok) throw new Error(`Router field HTTP ${response.status}`);
   return fieldFromArtifact(meta, await response.arrayBuffer());
 }

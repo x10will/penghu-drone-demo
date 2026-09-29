@@ -30,8 +30,20 @@ function setPanelCollapsed(value){
 }
 chevron.addEventListener('click',()=>setPanelCollapsed(!panelCollapsed));desktop.addEventListener('change',()=>setPanelCollapsed(false));$('viewer').addEventListener('load',()=>setPanelCollapsed(panelCollapsed));setPanelCollapsed(false);
 const map=connectEmbed($('viewer'),(name,p)=>{
+ if(name==='viewer:load'){
+  const hadPlan=!!(state.route||pendingLeg||state.itinerary);
+  pending=null;pendingLeg=null;flightStarted=false;
+  state.ready=false;state.route=null;state.itinerary=null;state.response=null;state.returnResponse=null;
+  state.flight=null;state.clock=null;state.routeReady=false;state.action='plan';
+  $('play').disabled=$('hour').disabled=true;$('ledger').hidden=$('summary').hidden=true;
+  $('time').textContent='--:--';$('hour').value='0';$('play').textContent='暫停';
+  $('follow').checked=$('tail').checked=false;$('rationale').replaceChildren();
+  $('error').textContent=fieldLoadError||'';
+  $('status').textContent=fieldLoadError||(hadPlan?'場域重新載入 · 請重新規劃':'載入場域…');
+  setPanelCollapsed(false);refresh();return;
+ }
  if(name==='twin:ready'){state.ready=true;$('status').textContent=fieldLoadError||'場域已就緒';$('play').disabled=$('hour').disabled=false;refresh();}
- if(name==='twin:clock'){state.clock=p;const m=Math.floor(p.hour*60);$('time').textContent=`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;$('hour').value=p.hour;$('play').textContent=(p.mode!=='paused')?'暫停':'播放';}
+ if(name==='twin:clock'&&state.ready){state.clock=p;const m=Math.floor(p.hour*60);$('time').textContent=`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;$('hour').value=p.hour;$('play').textContent=(p.mode!=='paused')?'暫停':'播放';}
  if(name==='twin:route-ready'&&state.itinerary&&p.requestId===state.response?.request_id){state.routeReady=true;state.action='fly';refresh();$('status').textContent='航線已提出 — 請目視確認';}
  if(name==='twin:flight'&&state.itinerary&&p.requestId===state.response?.request_id){
   if(state.action==='reset'&&state.clock?.mode==='flying'){flightStarted=true;refresh();}
@@ -67,7 +79,7 @@ function onResponse(r){
 }
 function refresh(){const label={plan:'規劃航線',loading:'規劃航線',fly:'模擬飛行',reset:'重設'}[state.action];if($('plan').textContent!==label){actionUnlockAt=performance.now()+800;clearTimeout(actionTimer);actionTimer=setTimeout(refresh,810);}$('plan').textContent=label;$('plan').disabled=performance.now()<actionUnlockAt||state.action==='loading'||(state.action==='reset'&&!flightStarted)||(state.action==='plan'&&!(state.ready&&state.online));$('replay').disabled=!state.routeReady;}
 function clear(){setPanelCollapsed(false);pendingLeg=null;state.route=null;state.itinerary=null;state.returnResponse=null;state.flight=null;state.routeReady=false;state.action='plan';$('ledger').hidden=true;$('follow').checked=$('tail').checked=false;$('rationale').replaceChildren();map.command('twin:clear',{});refresh();}
-function fly(){if(!state.routeReady)return;flightStarted=false;state.action='reset';refresh();setPanelCollapsed(true);phoneSheet.collapse();map.command('twin:fly',{frameRoute:desktop.matches});}
+function fly(){if(!state.ready||!state.routeReady)return;flightStarted=false;state.action='reset';refresh();setPanelCollapsed(true);phoneSheet.collapse();map.command('twin:fly',{frameRoute:desktop.matches});}
 function reset(){clear();if(desktop.matches)map.command('twin:view-reset',{});pending=null;state.response=null;$('route-form').reset();$('from').value='N04';$('to').value='N05';$('rate').value='1';$('details').open=false;$('summary').hidden=true;$('error').textContent='';$('status').textContent='場域已就緒';map.command('twin:clock',{hour:0,playing:true,rate:1});}
 function deliver(){
  pendingLeg=null;

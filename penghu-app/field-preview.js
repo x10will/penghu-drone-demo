@@ -10,7 +10,7 @@ function receive(event){
   const m=event.data;if(m?.channel!=='panel-core.map'||m.version!==1||m.type!=='appEvent')return;
   const {name,payload}=m.payload;
   if(name==='twin:coverage')state.coverage=payload;
-  if(name==='twin:clock'){
+  if(name==='twin:clock'&&state.ready){
     state.clock=payload;const minutes=Math.floor(payload.hour*60);
     time.textContent=`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
     slider.value=payload.hour;play.textContent=payload.mode==='playing'?'暫停':'播放';
@@ -24,7 +24,13 @@ function receive(event){
   if(name==='twin:error'||name==='extension-error'){state.errors.push(payload);document.getElementById('error').textContent=payload.message;}
 }
 window.addEventListener('message',receive);
-iframe.addEventListener('load',()=>send('hello',{}));
+iframe.addEventListener('load',()=>{
+ state.ready=state.clock=state.coverage=null;
+ play.disabled=slider.disabled=true;play.textContent='暫停';time.textContent='--:--';
+ document.getElementById('status').firstChild.textContent='載入地形與風險資料…';
+ document.getElementById('error').textContent='';
+ send('hello',{});
+});
 const viewerURL=new URL('../viewer/docs/viewer-3d/index.html',import.meta.url);
 viewerURL.search=new URLSearchParams({site:'penghu',embed:'1',ext:new URL('./penghu-layers.js',import.meta.url).pathname});iframe.src=viewerURL.href;
 play.addEventListener('click',()=>command('twin:clock',{playing:state.clock?.mode!=='playing'}));

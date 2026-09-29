@@ -24,6 +24,41 @@
   };
 
   const SITES = {
+    penghu: {
+      id: 'penghu',
+      label: '澎湖 Penghu · © OpenStreetMap contributors · 內政部 20 m DTM (OGDL 1.0)',
+      attribution: '© OpenStreetMap contributors · 內政部 20 m DTM (OGDL 1.0)',
+      center: { lat: 23.475, lng: 119.55 },
+      dataBase: '../../data/penghu',
+      lakeZ: 0,
+      cameraTargetZ: 1,
+      cameraFloorZ: 0,
+      cameraFar: 220000,
+      cameraMaxDistance: 160000,
+      terrainRayMaxDistance: 220000,
+      cameraPosition: [0, -10000, 140000],
+      fog: false,
+      fogPolicy: 'off',
+      sky: false,
+      renderStyle: 'apple',
+      environment: { default: 'daylight' },
+      scenarios: false,
+      progressiveLoading: true,
+      meshopt: true,
+      faviconHref: 'data:,',
+      poiLabelScreenH: 0.014,
+      props: [],
+      layers: {
+        terrain: true, nodes: true, edges: true, buildings: true,
+        intersections: false, lake: false, docks: false, ropeway: false,
+      },
+      viewpoints: {
+        archipelago: { label: '澎湖群島', pos: [0, -10000, 140000], target: [0, 0, 1] },
+        magong: { label: '馬公', posAnchor: [23.5626, 119.5647], posOffset: [300, -1100], posZ: 1000, targetAnchor: [23.5626, 119.5647], targetZ: 1 },
+        wangan: { label: '望安', posAnchor: [23.3620, 119.5082], posOffset: [0, -2600], posZ: 3000, targetAnchor: [23.3620, 119.5082], targetZ: 1 },
+        qimei: { label: '七美', posAnchor: [23.1946, 119.4190], posOffset: [0, -2600], posZ: 3000, targetAnchor: [23.2067, 119.4245], targetZ: 1 },
+      },
+    },
     // Existing SML site — values lifted verbatim from base.js/main.js so the
     // default (?site=sml) behavior is byte-identical after the refactor.
     sml: {
@@ -247,17 +282,6 @@
   function validateRegistry(registry) {
     const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
     const fail = () => { throw new Error('DT viewer: malformed deployment registry'); };
-    // Optional camera envelope, as main.js/base.js consume it: each is read with
-    // `?? default` (null or absent = default); cameraFar is the far plane beyond
-    // the fixed 10 m near plane, cameraMaxDistance and terrainRayMaxDistance are
-    // distances, and cameraPosition is spread into camera.position.set(x, y, z).
-    const optional = (value, valid) => value === undefined || value === null || valid(value);
-    const distance = v => Number.isFinite(v) && v > 0;
-    const cameraValid = site =>
-      optional(site.cameraFar, v => Number.isFinite(v) && v > 10) &&
-      optional(site.cameraMaxDistance, distance) &&
-      optional(site.terrainRayMaxDistance, distance) &&
-      optional(site.cameraPosition, v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite));
     if (!object(registry) || !object(registry.sites) ||
         !Object.hasOwn(registry.sites, registry.defaultSite)) fail();
     for (const [id, site] of Object.entries(registry.sites)) {
@@ -267,9 +291,7 @@
           !site.dataBase || !object(site.layers) ||
           !Number.isFinite(site.cameraTargetZ) || !Number.isFinite(site.cameraFloorZ) ||
           !(site.lakeZ === null || Number.isFinite(site.lakeZ)) ||
-          typeof site.scenarios !== 'boolean' || !cameraValid(site) ||
-          (site.startupNodeCount !== undefined &&
-            !(Number.isInteger(site.startupNodeCount) && site.startupNodeCount > 0))) fail();
+          typeof site.scenarios !== 'boolean') fail();
     }
     return registry;
   }

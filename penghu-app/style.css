@@ -42,3 +42,5 @@ header{height:64px}header h1{margin:0}main{height:calc(100dvh - 64px);grid-templ
  .panel-collapsed #legend-toggle{display:block;width:100%;min-height:32px;padding:5px 8px;background:transparent;border:0;text-align:left;white-space:nowrap;font-size:12px}
  .panel-collapsed #legend-body{display:none}
 }
+
+.daily-entry{color:#8be3d7;font-size:13px;white-space:nowrap;text-decoration:none;margin-left:auto;margin-right:16px}.daily-entry:hover{text-decoration:underline}@media(max-width:700px){.daily-entry{font-size:11px;margin-right:6px}header h1{font-size:14px}}

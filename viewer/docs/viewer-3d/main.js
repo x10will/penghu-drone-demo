@@ -1169,11 +1169,8 @@ async function loadMeshes() {
       registerTwins: true, extractNodeZ: true, layer: 'nodes',
     });
     if (!nodes) throw new Error('Required startup nodes failed to load');
-    // Optional site contract: a site may pin its startup node count so a
-    // truncated or stale nodes.glb fails loudly instead of rendering partially.
-    const expectedNodes = window.DT_SITE.startupNodeCount;
-    if (Number.isInteger(expectedNodes) && nodes.twins !== expectedNodes) {
-      throw new Error(`Site startup requires ${expectedNodes} nodes; loaded ${nodes.twins}`);
+    if (window.DT_SITE.id === 'penghu' && nodes.twins !== 15) {
+      throw new Error(`Penghu startup requires 15 nodes; loaded ${nodes.twins}`);
     }
     const details = [
       ['edges', { registerTwins: true, trackMaterials: true, layer: 'edges', mergeEdges: true }],

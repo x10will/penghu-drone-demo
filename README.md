@@ -5,13 +5,27 @@ Penghu route planner, synthetic wind-danger field, and scheduled drone animation
 The wind scenario, safety thresholds and proposed air corridors are demonstration
 assumptions, not measured weather, approved flight corridors or operational advice.
 
-Open [the demo](penghu-app/). This repository contains generated public runtime
+Open [the integrated demo](penghu-app/daily.html). This repository contains generated public runtime
 files built from the private penghu-drone and DT-Tourism source repositories.
 The source build is `python scripts/build_static.py --viewer-root <DT checkout>
 --node-modules <installed dependencies>`. `BUILD_INFO.json` records revisions and
 dependency versions. No application server, API key or live data service is needed.
 Publish this entire directory, including `.nojekyll`, as the GitHub Pages source.
 The same files work at the domain root or under any project subdirectory.
+
+Open [今日配送計畫](penghu-app/daily.html) for the baseline vaccine delivery day:
+one mock incoming batch, two health-center orders, one drone and two vans. The
+panel-core panels, three map actors and replay controls share the same computed
+simulation. V-01 and V-02 have locally bundled 3D van models with wheels driven
+by simulated travel distance; their 5 m display length is illustrative. Stock,
+timed transfers, custody, temperature and resource energy are
+calculated from inspectable mock inputs. The day summary accounts for remaining
+stock and final vehicle states; the drone remains on Qimei and recovery is outside
+this scenario. The hazard layer, map camera controls and route-trial panel are
+available in the same workspace. Route trials use a separately labelled preview
+with the original animated drone, close tail view, automatic route fitting and
+flight replay on the shared day clock. They do not change the supplied delivery run. Delivery input editing, disruptions,
+replanning and AI are later milestones.
 
 ## Data sources and attribution
 
@@ -39,17 +53,31 @@ The same files work at the domain root or under any project subdirectory.
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), as recorded inside
   the GLB. The model bytes are unchanged; the app changes display scale, orientation
   and position. Keep this credit, source and license link when redistributing.
+- **Van model:** `data/models/kenney-van/van.glb` and its local
+  `Textures/colormap.png`, from [Kenney Car Kit 3.1](https://kenney.nl/assets/car-kit),
+  [CC0](https://creativecommons.org/publicdomain/zero/1.0/).
+  The unmodified source asset, license and SHA-256 provenance are bundled in
+  that directory. The runtime uses a representative 5 m length and animated
+  wheel rotations; the appearance does not establish refrigeration capability.
 
 Required map credit follows the [OSMF interactive-map attribution guidance](https://osmfoundation.org/wiki/Licence/Attribution_Guidelines#Interactive_maps).
-On both app pages, a linked **© OpenStreetMap** notice appears in the bottom-right
-map corner without interaction on load; DTM/model text accompanies it when it
+On the app pages, a linked **© OpenStreetMap** notice appears in the map corner
+without interaction on load (top-right in the daily workspace, bottom-right in
+the original entry); DTM/model text accompanies it when it
 fits on one line. After five seconds or the first map interaction it collapses
 to an **ⓘ** button. The button opens the full linked OSM/ODbL, DTM/OGDL 1.0 and
-CesiumDrone/CC BY 4.0 credits. Close with ✕, Escape or a tap outside. This pattern
+CesiumDrone/CC BY 4.0 credits, plus Kenney/CC0 in the daily workspace.
+Close with ✕, Escape or a tap outside. This pattern
 is the same on phones and desktop, respects reduced motion and reserves no
 layout row. Credits remain separate from the legend, controls and sheet peek.
 
 ## Third-party code
+
+- **panel-core:** pinned browser kit and provenance in
+  `penghu-app/vendor/panel-core/VENDOR.json`; bundled dependency notices in
+  `penghu-app/vendor/panel-core/THIRD_PARTY_LICENSES.md` and
+  `penghu-app/vendor/panel-core/GRIDSTACK_LICENSE.txt`. The core's licence is
+  recorded as pending in its receipt; no new open-source licence grant is implied.
 
 - **three.js**, including its addons: MIT, © three.js authors. Full license:
   `viewer/node_modules/three/LICENSE`.
