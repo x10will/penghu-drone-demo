@@ -83,13 +83,13 @@ body{background:#0c1824}
 .daily-focus[aria-pressed=true]{background:#24645c}
 .daily-resource-end,.daily-recovery-note{padding:8px;border-radius:6px;background:#193b45;color:#cbe7e4;font-size:11px}
 .daily-recovery-note{background:#49392c;color:#f3d9a7}
-.daily-controls{display:grid;gap:10px;font:12px/1.5 system-ui;color:#e3eeee}
-.daily-controls p{margin:0}.daily-controls>label{display:grid;gap:4px}
-.daily-controls select{width:100%;min-width:0}.daily-controls>output{font-size:11px;color:#9ce0d4}
+.daily-controls,.daily-hazard-panel{display:grid;gap:10px;font:12px/1.5 system-ui;color:#e3eeee}
+.daily-controls p,.daily-hazard-panel p{margin:0}.daily-controls>label{display:grid;gap:4px}
+.daily-controls select{width:100%;min-width:0}.daily-controls>output,.daily-hazard-panel>output{font-size:11px;color:#9ce0d4}
 .daily-control-buttons{display:flex;gap:6px}.daily-control-buttons button{flex:1}
 .daily-control-buttons [aria-pressed=true]{background:#24645c;border-color:#75ded1}
 .daily-control-note{font-size:11px;color:#acc7cd}
-.daily-controls .daily-hazard-toggle{display:flex;align-items:center;gap:6px}
+.daily-hazard-toggle{display:flex;align-items:center;gap:6px}
 .daily-hazard-legend{display:flex;gap:8px;flex-wrap:wrap;font-size:11px}
 .daily-hazard-legend span:before{content:'';display:inline-block;width:13px;height:10px;margin-right:4px;border:1px solid #fff3}
 .daily-hazard-legend [data-kind=low]:before{background:#48a37c}
@@ -97,8 +97,16 @@ body{background:#0c1824}
 .daily-hazard-legend [data-kind=high]:before{background:#e67067}
 .daily-hazard-legend [data-kind=blocked]:before{border:2px solid #ff668f}
 .daily-hazard-legend [data-kind=uncertain]:before{background:repeating-linear-gradient(135deg,#647881 0 2px,#16313a 2px 5px)}
-.daily-controls output[data-state=error]{color:#ffbd9a}
+.daily-controls output[data-state=error]{color:#ffbd9a},.daily-hazard-panel output[data-state=error]{color:#ffbd9a}
+.daily-hazard-legend-box summary{cursor:pointer;margin-bottom:6px}
+.daily-launcher{display:flex;flex-direction:column;gap:6px;font:12px/1.5 system-ui;color:#e3eeee}
+.daily-launch-blurb{color:#acc7cd;font-size:11px}
+.daily-launch-link{align-self:flex-start;padding:4px 10px;border:1px solid #75ded1;border-radius:6px;color:#bff5ee;text-decoration:none}
+.daily-launch-link:hover,.daily-launch-link:focus-visible{background:#24645c}
+.daily-refusal{max-width:560px;margin:15vh auto;padding:20px;font:15px/1.7 system-ui;color:#e3eeee}
+.daily-refusal a{color:#bff5ee}
 @media(max-width:767px){
+  .panel-core-app .panel-grid>.panel-map{bottom:calc(var(--deck-h) + var(--nav-h))!important;height:auto!important}
   .daily-plan,.daily-order-panel,.daily-resource{padding:9px}
   .daily-metric{padding:6px}
   .daily-metric-value{font-size:14px}

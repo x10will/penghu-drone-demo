@@ -4,6 +4,7 @@ import {DroneVisual, VehicleVisual, RouteActor} from './route-actor.js';
 import {FollowCamera} from './follow-camera.mjs';
 import {initMapCredit} from './attribution.mjs';
 
+const DRAG_CANCEL_PX = 4, TAIL_WHEEL_RATE = 0.0015;
 const COLORS = {'D-01': '#67e4dc', 'V-01': '#ffd38a', 'V-02': '#a7baff'};
 
 /** Public viewer extension. All geographic poses come from the parent snapshot. */
@@ -67,16 +68,46 @@ export default function setup(api) {
   for (const button of tools.querySelectorAll('[data-mode]')) button.addEventListener('click', () => setCamera({mode: button.dataset.mode, resourceId: resourceSelect.value}, true));
   resourceSelect.addEventListener('change', () => setCamera({...cameraMode, resourceId: resourceSelect.value}, true));
   hazardToggle.addEventListener('change', () => { hazard.setVisible(hazardToggle.checked); emit('daily:hazard-visibility', {visible: hazardToggle.checked}); });
-  const manualCamera = event => {
-    if (tools.contains(event.target) || credit.contains(event.target)) return;
-    if (event.type === 'keydown' && !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '-', '=', 'w', 'a', 's', 'd'].includes(event.key)) return;
+  // Zoom keeps following. A drag or a navigation key hands the camera back; a
+  // plain click or wheel does not. In tail mode the camera is re-posed every frame,
+  // so the wheel here is the only zoom: it scales the tail distance.
+  const outside = event => tools.contains(event.target) || credit.contains(event.target);
+  const releaseFollow = () => {
     pendingTrialFrame = false;
     if (cameraMode.mode !== 'free') setCamera({...cameraMode, mode: 'free'}, true);
   };
-  for (const type of ['pointerdown', 'touchstart', 'wheel', 'keydown']) {
-    document.addEventListener(type, manualCamera, {capture: true, passive: true});
-    off.push(() => document.removeEventListener(type, manualCamera, {capture: true}));
-  }
+  const downs = new Map();
+  const onPointerDown = event => {
+    if (outside(event)) return;
+    pendingTrialFrame = false;
+    downs.set(event.pointerId, {x: event.clientX, y: event.clientY});
+  };
+  const onPointerMove = event => {
+    const start = downs.get(event.pointerId);
+    // Two pointers down is a pinch zoom, not a drag.
+    if (!start || downs.size > 1) return;
+    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > DRAG_CANCEL_PX) { downs.clear(); releaseFollow(); }
+  };
+  const onPointerEnd = event => { downs.delete(event.pointerId); };
+  const onKey = event => {
+    if (outside(event) || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'w', 'a', 's', 'd'].includes(event.key)) return;
+    releaseFollow();
+  };
+  const onWheel = event => {
+    if (outside(event)) return;
+    pendingTrialFrame = false;
+    if (cameraMode.mode !== 'tail' || !event.deltaY) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    followCamera.zoomTail(Math.exp(Math.max(-300, Math.min(300, event.deltaY * (event.deltaMode === 1 ? 16 : 1))) * TAIL_WHEEL_RATE));
+    moveCamera();
+  };
+  const listen = (type, handler, passive = true) => {
+    document.addEventListener(type, handler, {capture: true, passive});
+    off.push(() => document.removeEventListener(type, handler, {capture: true}));
+  };
+  listen('pointerdown', onPointerDown); listen('pointermove', onPointerMove);
+  listen('pointerup', onPointerEnd); listen('pointercancel', onPointerEnd);
+  listen('keydown', onKey); listen('wheel', onWheel, false);
   const position = (point, air = false) => {
     const [x, y] = api.geoToLocal(point.lat, point.lng);
     const ground = api.sampleGround(x, y);

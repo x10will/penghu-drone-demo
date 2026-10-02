@@ -3,9 +3,14 @@ import {BASELINE_FIXTURE} from './daily-fixture.mjs';
 import {simulateDay, snapshotAt} from './daily-simulation.mjs';
 import {createDailyMap} from './daily-map.mjs';
 import {createDailyPanels, minuteLabel} from './daily-panels.mjs';
-import {createMapControls} from './daily-controls.mjs';
+import {createCameraControls, createHazardControls, createScenarioLauncher} from './daily-controls.mjs';
 import {createTrialPlanner} from './daily-route-panel.mjs';
 import {FLIGHT_LEAD_H} from './scenario-clock.mjs';
+import {resolveScenario, SCENARIOS} from './scenario.mjs';
+
+// daily-gate.mjs has already refused an unknown ?scenario=.
+const {scenario} = resolveScenario(location.search);
+const isDrone = scenario.id === 'drone';
 
 const run = simulateDay(BASELINE_FIXTURE);
 const startMin = run.startMin;
@@ -20,7 +25,8 @@ let state = {
   focusedResourceId: null,
   mapStatus: {ready: false},
   camera: {mode: 'free', resourceId: 'D-01'},
-  hazardVisible: true,
+  // The risk field starts hidden only in the delivery check; the trial avoids it, so the drone check shows it.
+  hazardVisible: scenario.id !== 'delivery',
   fieldStatus: {loading: true},
   trialPlan: null,
 };
@@ -95,6 +101,7 @@ const actions = {
       store.set({trialPlan, camera: reset, focusedResourceId: null});
     } else store.set({trialPlan});
     dailyMap?.setTrialPlan(trialPlan);
+    if (trialPlan && isDrone) actions.setCamera({mode: 'tail', resourceId: 'trial'});
   },
   focusTrial() {
     if (!store.get().trialPlan) return;
@@ -108,21 +115,56 @@ const actions = {
     trialArrivalElapsed = (trial.itinerary.arrive_h * 60 - startMin) * 60_000;
     app.clock.pause();
     app.clock.seek((start - startMin) * 60_000);
-    const camera = {...store.get().camera, resourceId: 'trial'};
+    const camera = {...store.get().camera, resourceId: 'trial', ...(isDrone ? {mode: 'tail'} : {})};
     store.set({selectedEventId: null, camera, focusedResourceId: camera.mode === 'free' ? null : 'trial'});
     dailyMap?.frameTrial?.();
     app.clock.play();
   },
 };
 const {dailyPlan, orderDetail, resource} = createDailyPanels({run, store, actions});
-const mapControls = createMapControls({run, store, actions});
+const cameraControls = createCameraControls({run, store, actions});
+const hazardControls = createHazardControls({store, actions, legendOpen: scenario.id === 'hazard'});
+const scenarioLauncher = createScenarioLauncher();
 const trialPlanner = createTrialPlanner({run, store, actions});
+const resourcePanel = (id, x, y, w, h) => ({id: resourcePanelId(id), type: 'resource', resourceId: id, x, y, w, h});
+const launcher = (target, x, y, w, h) => ({id: `launch-${target}`, type: 'scenarioLauncher', scenarioId: target, x, y, w, h});
+const others = SCENARIOS.filter(item => item.id !== scenario.id).map(item => item.id);
+// Row 0 holds the active check's panels beside the map; the other two checks are launchers.
+const presets = {
+  delivery: [
+    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 7},
+    {id: 'daily-plan', type: 'dailyPlan', x: 6, y: 0, w: 3, h: 7},
+    {id: 'order-detail', type: 'orderDetail', x: 9, y: 0, w: 3, h: 7},
+    {id: 'camera-controls', type: 'cameraControls', x: 0, y: 7, w: 4, h: 5},
+    launcher(others[0], 4, 7, 4, 2),
+    launcher(others[1], 4, 9, 4, 2),
+    resourcePanel('D-01', 8, 7, 4, 5),
+    resourcePanel('V-01', 0, 12, 6, 4),
+    resourcePanel('V-02', 6, 12, 6, 4),
+  ],
+  drone: [
+    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 8},
+    {id: 'trial-planner', type: 'trialPlanner', x: 6, y: 0, w: 3, h: 8},
+    {id: 'hazard-controls', type: 'hazardControls', x: 9, y: 0, w: 3, h: 4},
+    {id: 'camera-controls', type: 'cameraControls', x: 9, y: 4, w: 3, h: 4},
+    resourcePanel('D-01', 0, 8, 6, 4),
+    launcher(others[0], 6, 8, 6, 2),
+    launcher(others[1], 6, 10, 6, 2),
+  ],
+  hazard: [
+    {id: 'map', type: 'map', x: 0, y: 0, w: 8, h: 9},
+    {id: 'hazard-controls', type: 'hazardControls', x: 8, y: 0, w: 4, h: 4},
+    {id: 'camera-controls', type: 'cameraControls', x: 8, y: 4, w: 4, h: 5},
+    launcher(others[0], 0, 9, 6, 2),
+    launcher(others[1], 6, 9, 6, 2),
+  ],
+};
+const preset = presets[scenario.id];
 const manifest = {
   version: 1,
-  // Preserve earlier saved layouts under their IDs; the integrated workspace
-  // starts with its new control and trial panels visible.
-  id: 'penghu-vaccine-daily-workspace-v1',
-  title: '今日配送計畫',
+  // Each check remembers its own layout under its own ID.
+  id: `penghu-vaccine-daily-${scenario.id}-v2`,
+  title: `澎湖疫苗配送 · ${scenario.title}`,
   subtitle: `${run.fixture.date} · 模擬資料 · ${run.fixture.timezone}`,
   locale: 'zh-Hant',
   locales: ['zh-Hant'],
@@ -137,30 +179,26 @@ const manifest = {
     controls: true,
     labelFormat: elapsedMs => minuteLabel(startMin + elapsedMs / 60_000),
   },
-  panelTypes: {dailyPlan, orderDetail, resource, mapControls, trialPlanner},
+  panelTypes: {dailyPlan, orderDetail, resource, cameraControls, hazardControls, trialPlanner, scenarioLauncher},
+  // Every panel type stays available in every check; only the preset differs.
   catalogue: [
     {id: 'map', type: 'map', titleKey: '配送地圖', icon: '⌖', defaultSize: {w: 6, h: 7}},
     {id: 'daily-plan', type: 'dailyPlan', titleKey: '今日配送計畫', icon: '▤', defaultSize: {w: 3, h: 7}},
     {id: 'order-detail', type: 'orderDetail', titleKey: '訂單詳情', icon: '▧', defaultSize: {w: 3, h: 7}},
-    {id: 'map-controls', type: 'mapControls', titleKey: '地圖與風險', icon: '◉', defaultSize: {w: 4, h: 5}},
+    {id: 'camera-controls', type: 'cameraControls', titleKey: '視角', icon: '◉', defaultSize: {w: 4, h: 5}},
+    {id: 'hazard-controls', type: 'hazardControls', titleKey: '風險場', icon: '◐', defaultSize: {w: 4, h: 5}},
     {id: 'trial-planner', type: 'trialPlanner', titleKey: '航線試算', icon: '⌁', defaultSize: {w: 4, h: 5}},
     ...run.fixture.resources.map(item => ({id: resourcePanelId(item.id), type: 'resource', resourceId: item.id,
       titleKey: item.label, icon: item.type === 'drone' ? '◇' : '▣', defaultSize: {w: 4, h: 4}})),
+    ...others.map(target => ({id: `launch-${target}`, type: 'scenarioLauncher', scenarioId: target,
+      titleKey: `切換：${SCENARIOS.find(item => item.id === target).title}`, icon: '↗', defaultSize: {w: 4, h: 2}})),
   ],
-  preset: [
-    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 7},
-    {id: 'daily-plan', type: 'dailyPlan', x: 6, y: 0, w: 3, h: 7},
-    {id: 'order-detail', type: 'orderDetail', x: 9, y: 0, w: 3, h: 7},
-    {id: 'map-controls', type: 'mapControls', x: 0, y: 7, w: 4, h: 5},
-    {id: 'trial-planner', type: 'trialPlanner', x: 4, y: 7, w: 4, h: 5},
-    {id: resourcePanelId('D-01'), type: 'resource', resourceId: 'D-01', x: 8, y: 7, w: 4, h: 5},
-    {id: resourcePanelId('V-01'), type: 'resource', resourceId: 'V-01', x: 0, y: 12, w: 6, h: 4},
-    {id: resourcePanelId('V-02'), type: 'resource', resourceId: 'V-02', x: 6, y: 12, w: 6, h: 4},
-  ],
-  layout: {phone: {order: ['daily-plan', 'order-detail', 'map-controls', 'trial-planner', resourcePanelId('V-01'), resourcePanelId('D-01'), resourcePanelId('V-02')],
-    activeId: 'daily-plan', deckVisible: true}},
+  preset,
+  layout: {phone: {order: preset.filter(item => item.type !== 'map').map(item => item.id),
+    activeId: preset.find(item => item.type !== 'map').id, deckVisible: true}},
   theme: {accent: '#64d5c8'},
 };
+document.title = `${scenario.title}｜今日配送計畫｜澎湖疫苗配送模擬`;
 
 app = createApp(document.querySelector('#app'), manifest);
 app.clock.pause();
@@ -177,6 +215,7 @@ const onGlobalSeek = () => stopTrialPlayback();
 for (const target of seekTargets) target.addEventListener(target.tagName === 'INPUT' ? 'input' : 'click', onGlobalSeek, true);
 dailyMap = createDailyMap({
   map: app.map,
+  hazardVisible: store.get().hazardVisible,
   run,
   onStatus(status) {
     store.set({mapStatus: status});
