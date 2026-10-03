@@ -136,7 +136,7 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
 
   async function initialize() {
     try {
-      meta = await loader.load();
+      meta = await loader.loadMetadata();
       if (disposed) return;
       const grid = sampledGrid(meta.bbox, api.geoToLocal, api.sampleGround, 250);
       if (grid.report.missing) throw new Error('Incomplete terrain sampling coverage');

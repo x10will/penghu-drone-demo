@@ -3,11 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>日月潭 3D — Digital Twin Viewer</title>
+<title>Digital Twin Viewer</title>
 <link rel="stylesheet" href="style.css">
 <script>
 if (new URLSearchParams(location.search).get('embed') === '1') {
   document.documentElement.classList.add('dt-embed');
+  // Opt-in compact camera navigation for phone-width touch hosts (embed.css).
+  if (new URLSearchParams(location.search).get('compactNav') === '1') {
+    document.documentElement.classList.add('dt-embed-compact-nav');
+  }
   document.write('<link rel="stylesheet" href="embed.css">');
 }
 </script>
@@ -15,15 +19,19 @@ if (new URLSearchParams(location.search).get('embed') === '1') {
 <body>
 
 <div id="loading">
-  <div>Loading 日月潭 3D...</div>
+  <div id="loading-title">Loading…</div>
   <div id="loading-bar"><div id="loading-fill"></div></div>
   <div id="loading-status">Initializing...</div>
+  <div id="loading-error" role="alert" aria-live="assertive" hidden>
+    <h2 id="loading-error-heading">This site can't be loaded</h2>
+    <div id="loading-error-message"></div>
+  </div>
 </div>
 
 <div id="canvas-container"></div>
 
 <div id="hud">
-  <h1>日月潭 3D</h1>
+  <h1>Digital Twin Viewer</h1>
   <span id="time-display">--:--</span>
   <span id="act-badge" style="padding:2px 8px;border-radius:3px;font-size:11px;background:#0f2940;color:#5b9bd5">--</span>
   <select id="scenario-select" class="ctrl-select">
@@ -68,7 +76,7 @@ if (new URLSearchParams(location.search).get('embed') === '1') {
       <label id="toggle-props-label" style="display:none"><input type="checkbox" id="toggle-props" checked> props</label>
       <label id="toggle-splats-label" style="display:none"><input type="checkbox" id="toggle-splats" checked> splats</label>
       <label id="toggle-edge-labels-label" style="display:none"><input type="checkbox" id="toggle-edge-labels" checked> labels</label>
-      <label id="toggle-farm-field-ridges-label" style="display:none"><input type="checkbox" id="toggle-farm-field-ridges" checked> field ridges</label>
+      <span id="context-layer-toggles"></span>
     </span>
     <span class="toggle-group">
       <span class="toggle-group-label">View</span>

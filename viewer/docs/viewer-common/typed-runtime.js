@@ -1,3 +1,5 @@
+import { fetchSiteAsset as fetch } from './fetch-site-asset.mjs';
+
 export class TypedRuntimeRegistry {
   constructor() {
     this._elementsById = new Map();

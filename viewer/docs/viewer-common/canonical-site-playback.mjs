@@ -1,8 +1,34 @@
-// Optional canonical site boundary. Authority: September 13 adapter brief.
+// Optional canonical site boundary. Authority: September 13 adapter brief,
+// generalized to declared sites by the owner's September 30, 2026 brief.
 export function canonicalCandidateUrl(site, search, pageUrl) {
+  return canonicalCandidate(site, search, pageUrl)?.url ?? null;
+}
+
+// Declared canonical scenarios. `?scenario=<id>` picks one entry of the site's
+// `canonicalScenarios` allowlist; without the parameter the site's
+// `canonicalManifest` plays as before. An id the site does not declare, or a
+// scenario outside the canonical opt-in, fails closed: each scenario plays only
+// its own declared candidate, and the viewer never substitutes another one.
+export const SCENARIO_AUTHORITY = "Will, 2026-09-28: 'hmm. the use cases are not clear. 巡田 is a feature, identify pest spread is another'";
+
+export function canonicalCandidate(site, search, pageUrl) {
   const query = new URLSearchParams(search);
-  return site.id === 'farm' && query.get('site') === 'farm' && query.get('canonical') === '1'
-    && site.canonicalManifest ? new URL(site.canonicalManifest, pageUrl).href : null;
+  const optedIn = query.get('site') === site.id && query.get('canonical') === '1';
+  const scenario = query.get('scenario');
+  if (scenario === null) {
+    return optedIn && site.canonicalManifest
+      ? { url: new URL(site.canonicalManifest, pageUrl).href, scenario: null } : null;
+  }
+  const declared = site.canonicalScenarios && typeof site.canonicalScenarios === 'object'
+    ? site.canonicalScenarios : {};
+  if (!optedIn || !Object.hasOwn(declared, scenario) || typeof declared[scenario] !== 'string') {
+    const known = Object.keys(declared).join(', ') || 'none';
+    throw new Error(`情境「${scenario}」未在此站台宣告（已宣告：${known}）。`
+      + '為確保每個情境只播放自己宣告的模擬候選資料、不以其他候選代替，檢視器停止載入。'
+      + ` Undeclared scenario '${scenario}' (declared: ${known}): refusing to play another candidate in its place.`
+      + ` Asked by ${SCENARIO_AUTHORITY}.`);
+  }
+  return { url: new URL(declared[scenario], pageUrl).href, scenario };
 }
 
 export async function sha256(bytes) {

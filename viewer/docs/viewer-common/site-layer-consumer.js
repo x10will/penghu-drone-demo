@@ -17,6 +17,7 @@ export const CONTEXT_LAYER_ROLES = Object.freeze([
   'white-context-buildings',
   'supported-labels',
   'farm-field-ridges',
+  'context-waterways',
 ]);
 
 // Source: viewer-site-config/spec.md:76-105 and
@@ -121,19 +122,51 @@ function roleDeclarations(site) {
   const declarations = site?.contextLayerRoles;
   if (declarations == null) return [];
   if (Array.isArray(declarations)) {
-    return declarations.map((role) => [role, { enabled: true }]);
+    const seen = new Set();
+    return declarations.map((role) => {
+      validateRole(role);
+      if (seen.has(role)) {
+        throw new Error(`site-layer consumer: duplicate context role declaration '${role}'`);
+      }
+      seen.add(role);
+      return [role, { enabled: true }];
+    });
   }
-  if (typeof declarations !== 'object') {
+  if (typeof declarations !== 'object' || Array.isArray(declarations)) {
     throw new Error('site-layer consumer: contextLayerRoles must be an array or object');
   }
   return Object.entries(declarations).map(([role, declaration]) => {
+    validateRole(role);
     if (declaration === false) return [role, { enabled: false }];
     if (declaration === true || declaration == null) return [role, { enabled: true }];
-    if (typeof declaration !== 'object') {
+    if (typeof declaration !== 'object' || Array.isArray(declaration)) {
       throw new Error(`site-layer consumer: declaration for ${role} must be an object`);
+    }
+    if (Object.hasOwn(declaration, 'enabled') && typeof declaration.enabled !== 'boolean') {
+      throw new Error(`site-layer consumer: enabled for ${role} must be a boolean`);
+    }
+    if (Object.hasOwn(declaration, 'required') && typeof declaration.required !== 'boolean') {
+      throw new Error(`site-layer consumer: required for ${role} must be a boolean`);
+    }
+    if (Object.hasOwn(declaration, 'label')) {
+      nonEmptyString(declaration.label, `label for ${role}`);
     }
     return [role, declaration];
   });
+}
+
+function contextLayerLabel(site, role, declaration, record) {
+  if (Object.prototype.hasOwnProperty.call(declaration, 'label')) {
+    return nonEmptyString(declaration.label, `label for ${role}`).trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(record, 'label')) {
+    return nonEmptyString(record.label, `manifest label for ${role}`).trim();
+  }
+  const siteId = typeof site?.id === 'string' ? site.id.trim() : '';
+  const labelRole = siteId && role.startsWith(`${siteId}-`)
+    ? role.slice(siteId.length + 1)
+    : role;
+  return labelRole.replace(/[-_]+/g, ' ').trim();
 }
 
 function validateRole(role) {
@@ -157,16 +190,6 @@ function validateRelativePath(value, label) {
   return path.replaceAll('\\', '/').replace(/^\/+/, '');
 }
 
-function manifestLayer(manifest, role) {
-  const layers = manifest?.layers;
-  if (!layers) return null;
-  if (Array.isArray(layers)) {
-    return layers.find((row) => row && (row.role === role || row.id === role)) || null;
-  }
-  if (typeof layers === 'object') return layers[role] || null;
-  throw new Error('site-layer consumer: manifest.layers must be an object or array');
-}
-
 function assertNoSmlRoute(site, url, path) {
   // Farm's active data root is declared in docs/viewer-3d/site-config.js and
   // must never be substituted with the SML root. Check both the joined URL and
@@ -185,21 +208,43 @@ function validateContextRecord(site, role, record) {
       throw new Error(`site-layer consumer: context role ${role} contains forbidden authority field ${field}`);
     }
   }
-  if (record.lineage && typeof record.lineage === 'object') {
+  if (Object.hasOwn(record, 'lineage')) {
+    if (!isRecord(record.lineage)) {
+      throw new Error(`site-layer consumer: lineage for ${role} must be an object`);
+    }
     for (const field of FORBIDDEN_CONTEXT_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(record.lineage, field)) {
         throw new Error(`site-layer consumer: context role ${role} lineage contains forbidden authority field ${field}`);
       }
     }
   }
-  if (record.role != null && record.role !== role) {
+  if (Object.hasOwn(record, 'role') && record.role !== role) {
     throw new Error(`site-layer consumer: manifest role identity mismatch for ${role}`);
   }
+  for (const flag of ['enabled', 'required', 'visible']) {
+    if (Object.hasOwn(record, flag) && typeof record[flag] !== 'boolean') {
+      throw new Error(`site-layer consumer: ${flag} for ${role} must be a boolean`);
+    }
+  }
+  for (const field of ['id', 'stable_id', 'label']) {
+    if (Object.hasOwn(record, field)) {
+      nonEmptyString(record[field], `${field} for ${role}`);
+    }
+  }
   const kind = nonEmptyString(record.kind, `kind for ${role}`);
+  const usesLabelLoader = kind === 'json' || kind === 'labels';
+  if (usesLabelLoader !== (role === 'supported-labels')) {
+    throw new Error(
+      `site-layer consumer: kind for ${role} must select the ${role === 'supported-labels' ? 'JSON label' : 'GLB'} loader`,
+    );
+  }
   const aliasOf = record.alias_of;
   // The explicit alias_of field is the structural distinction. The proposal
   // does not authorize a new literal kind value; kind remains producer-owned.
   const isTerrainAlias = aliasOf !== undefined;
+  if (TERRAIN_ALIAS_ROLES.includes(role) && !isTerrainAlias) {
+    throw new Error(`site-layer consumer: ${role} must declare alias_of=${TERRAIN_ALIAS_TARGET}`);
+  }
   let path = null;
   if (isTerrainAlias) {
     if (!TERRAIN_ALIAS_ROLES.includes(role)) {
@@ -216,6 +261,12 @@ function validateContextRecord(site, role, record) {
       throw new Error(`site-layer consumer: ${role} has an unsupported alias target`);
     }
     path = validateRelativePath(record.path, `manifest path for ${role}`);
+    const expectedSuffix = role === 'supported-labels' ? '.json' : '.glb';
+    if (!path.endsWith(expectedSuffix)) {
+      throw new Error(
+        `site-layer consumer: ${role} path must end with ${expectedSuffix}`,
+      );
+    }
   }
   const root = validateRelativePath(record.root, `layer root for ${role}`);
   if (isTerrainAlias && root !== TERRAIN_ALIAS_TARGET) {
@@ -236,6 +287,66 @@ function validateContextRecord(site, role, record) {
     alias_of: isTerrainAlias ? aliasOf : null,
     optionalMetadata: optionalContextMetadata(record, role),
   };
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export function hasEnabledContextRoles(site) {
+  return roleDeclarations(site).some(([, declaration]) => declaration.enabled !== false);
+}
+
+/** Validate an active context manifest completely before selecting any role. */
+export function validateContextManifest(site, manifest) {
+  const active = hasEnabledContextRoles(site);
+  if (!active) {
+    return { active: false, warnings: [], recordsByRole: Object.create(null) };
+  }
+
+  if (!isRecord(manifest)) {
+    throw new Error('site-layer consumer: active context manifest must be an object');
+  }
+  const warnings = [];
+  if (Object.hasOwn(manifest, 'dtContract')) {
+    if (manifest.dtContract !== 1) {
+      throw new Error('site-layer consumer: unsupported dtContract major for context manifest; supported major is 1');
+    }
+  } else {
+    warnings.push({
+      code: 'missing-dtContract',
+      scope: 'context manifest',
+      message: `[dt-contract] context manifest for '${site?.id || 'unknown site'}' omits dtContract; interpreting as major 1`,
+    });
+  }
+
+  const layers = manifest.layers;
+  if (!Array.isArray(layers) && !isRecord(layers)) {
+    throw new Error('site-layer consumer: active manifest.layers must be an object or array');
+  }
+  const recordsByRole = Object.create(null);
+  const add = (role, record) => {
+    validateRole(role);
+    if (Object.hasOwn(recordsByRole, role)) {
+      throw new Error(`site-layer consumer: duplicate context manifest role '${role}'`);
+    }
+    const normalized = validateContextRecord(site, role, record);
+    recordsByRole[role] = { record, normalized };
+  };
+
+  if (Array.isArray(layers)) {
+    for (const record of layers) {
+      if (!isRecord(record) || !Object.hasOwn(record, 'role')) {
+        throw new Error('site-layer consumer: array manifest role is required on every record');
+      }
+      const role = nonEmptyString(record.role, 'array manifest role');
+      add(role, record);
+    }
+  } else {
+    for (const [role, record] of Object.entries(layers)) add(role, record);
+  }
+
+  return { active: true, warnings, recordsByRole };
 }
 
 function assetUrl(site, path) {
@@ -287,23 +398,25 @@ export function applyProvenanceCatalog(requests, catalog) {
  * request and never trigger an SML fallback. A declaration or manifest row
  * may set required:true to turn that absence into a fail-closed error.
  */
-export function resolveDeclaredLayerRequests(site, manifest) {
+export function resolveDeclaredLayerRequests(site, manifest, validation = null) {
+  const validated = validation || validateContextManifest(site, manifest);
+  if (!validated.active) return [];
   const requests = [];
   for (const [role, declaration] of roleDeclarations(site)) {
-    validateRole(role);
     if (declaration.enabled === false) continue;
-    const record = manifestLayer(manifest, role);
-    if (!record) {
+    const found = validated.recordsByRole[role];
+    if (!found) {
       if (declaration.required === true) {
         throw new Error(`site-layer consumer: required context role '${role}' is absent from the manifest`);
       }
       continue;
     }
+    const { record, normalized } = found;
     if (record.enabled === false) continue;
     if (record.required === true && declaration.enabled === false) continue;
-    const normalized = validateContextRecord(site, role, record);
     const request = {
       role,
+      label: contextLayerLabel(site, role, declaration, record),
       root: normalized.root,
       kind: normalized.kind,
       stable_id: normalized.stable_id,
@@ -324,6 +437,25 @@ export function resolveDeclaredLayerRequests(site, manifest) {
     requests.push(Object.freeze(request));
   }
   return requests;
+}
+
+/** Build stable UI descriptors from the resolved, declared roots. */
+export function contextLayerToggleDefinitions(requests) {
+  const roots = new Set();
+  const definitions = [];
+  for (const request of requests ?? []) {
+    if (!request || request.alias_of) continue;
+    const key = nonEmptyString(request.root, 'context toggle root');
+    if (roots.has(key)) continue;
+    const role = nonEmptyString(request.role, 'context toggle role');
+    definitions.push(Object.freeze({
+      key,
+      checkboxId: `toggle-${role}`,
+      label: nonEmptyString(request.label, `context toggle label for ${role}`).trim(),
+    }));
+    roots.add(key);
+  }
+  return Object.freeze(definitions);
 }
 
 /**

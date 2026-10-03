@@ -19,7 +19,6 @@ body{background:#0c1824}
 .daily-run-id{font-size:11px;color:#abc3cc}
 .daily-now{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;color:#eafffb;white-space:nowrap}
 .daily-phase{color:#a8c6ce}
-.daily-shortcuts{display:flex;gap:8px}.daily-shortcuts button{min-height:36px;font-size:12px}
 .daily-model-inputs pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:10px;max-height:280px;overflow:auto}
 .daily-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
 .daily-metric{min-width:0;padding:8px;border:1px solid #31505c;border-radius:8px;background:#102d3b}
@@ -83,6 +82,26 @@ body{background:#0c1824}
 .daily-focus[aria-pressed=true]{background:#24645c}
 .daily-resource-end,.daily-recovery-note{padding:8px;border-radius:6px;background:#193b45;color:#cbe7e4;font-size:11px}
 .daily-recovery-note{background:#49392c;color:#f3d9a7}
+.daily-resource-status-panel{padding:9px;container-type:inline-size}
+.daily-resource-list{display:grid;gap:4px}
+.daily-resource-row{display:grid;grid-template-columns:minmax(125px,1.5fr) 50px 60px 85px minmax(90px,1.5fr);align-items:center;gap:8px;width:100%;min-height:35px;padding:6px 8px;text-align:left;border:1px solid #31505c;border-radius:6px;background:#102d3b;font-size:11px}
+.daily-resource-row>span,.daily-resource-row>strong{min-width:0;overflow-wrap:anywhere}
+.daily-resource-row strong{font-size:11px}
+.daily-resource-row[aria-pressed=true]{border-color:#75ded1;background:#173d48}
+.daily-resource-row-status{color:#8ee3d7}
+.daily-resource-row-energy{font-variant-numeric:tabular-nums;white-space:nowrap}
+.daily-resource-row-position{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#acc7cd}
+.daily-resource-table-heading{min-height:0;padding:0 8px 3px;border:0;background:transparent;color:#a6bec6;font-size:10px}
+.daily-resource-selected-detail{margin-top:8px;padding:8px;border:1px solid #31505c;border-radius:6px;background:#0e2633}
+.daily-resource-selected-detail .daily-resource-detail-heading{margin:0 0 4px;font-size:12px}
+.daily-resource-selected-detail h4{margin:7px 0 3px;font-size:11px;color:#a6bec6}
+.daily-resource-detail-facts{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;font-size:11px}
+.daily-resource-selected-detail .daily-resource-schedule{max-height:82px}
+.daily-resource-selected-detail .daily-resource-event{min-height:25px;padding:3px 6px}
+.daily-resource-selected-detail .daily-resource-activity{margin:3px 0 5px;font-size:11px}
+.daily-resource-selected-detail .daily-resource-end{margin:5px 0 0;padding:5px;font-size:10px}
+@media(max-width:600px){.daily-resource-row{grid-template-columns:minmax(90px,1.4fr) 40px 50px 75px;gap:5px}.daily-resource-row-position,.daily-resource-table-heading>span:last-child{grid-column:1/-1;white-space:normal}.daily-resource-table-heading>span:last-child{display:none}.daily-resource-detail-facts{grid-template-columns:1fr}}
+@container(max-width:460px){.daily-resource-row{grid-template-columns:minmax(80px,1fr) 40px 50px 75px;gap:5px}.daily-resource-row-position{grid-column:1/-1;white-space:normal}.daily-resource-table-heading>span:last-child{display:none}.daily-resource-detail-facts{grid-template-columns:1fr}}
 .daily-controls,.daily-hazard-panel{display:grid;gap:10px;font:12px/1.5 system-ui;color:#e3eeee}
 .daily-controls p,.daily-hazard-panel p{margin:0}.daily-controls>label{display:grid;gap:4px}
 .daily-controls select{width:100%;min-width:0}.daily-controls>output,.daily-hazard-panel>output{font-size:11px;color:#9ce0d4}
@@ -99,10 +118,6 @@ body{background:#0c1824}
 .daily-hazard-legend [data-kind=uncertain]:before{background:repeating-linear-gradient(135deg,#647881 0 2px,#16313a 2px 5px)}
 .daily-controls output[data-state=error]{color:#ffbd9a},.daily-hazard-panel output[data-state=error]{color:#ffbd9a}
 .daily-hazard-legend-box summary{cursor:pointer;margin-bottom:6px}
-.daily-launcher{display:flex;flex-direction:column;gap:6px;font:12px/1.5 system-ui;color:#e3eeee}
-.daily-launch-blurb{color:#acc7cd;font-size:11px}
-.daily-launch-link{align-self:flex-start;padding:4px 10px;border:1px solid #75ded1;border-radius:6px;color:#bff5ee;text-decoration:none}
-.daily-launch-link:hover,.daily-launch-link:focus-visible{background:#24645c}
 .daily-refusal{max-width:560px;margin:15vh auto;padding:20px;font:15px/1.7 system-ui;color:#e3eeee}
 .daily-refusal a{color:#bff5ee}
 @media(max-width:767px){
@@ -111,3 +126,23 @@ body{background:#0c1824}
   .daily-metric{padding:6px}
   .daily-metric-value{font-size:14px}
 }
+/* App-owned shell adaptations for the daily desktop checks. */
+.panel-manager[hidden]{display:none!important}
+.daily-check-switch{display:flex;border:1px solid #456473;border-radius:8px;overflow:hidden;flex-shrink:0}
+.daily-check-switch a{padding:9px 12px;color:#aec7cf;text-decoration:none;font-size:13px;white-space:nowrap}
+.daily-check-switch a[aria-current]{background:#24645c;color:#edfffb}
+.daily-check-switch a:focus-visible{outline:2px solid #75ded1;outline-offset:-2px}
+.daily-header-time{font-size:12px;white-space:nowrap;color:#b6ced4;font-variant-numeric:tabular-nums}
+.panel-core-app .app-settings>div{max-height:calc(100dvh - 100px);overflow:auto}
+.panel-core-app .app-settings select{min-width:0;width:100%}
+.panel-core-app .replay-controls{grid-template-columns:auto auto minmax(45px,1fr) auto auto auto auto}
+.panel-core-app .replay-controls output{grid-row:2;grid-column:1/-1}
+.panel-core-app .replay-controls button,.panel-core-app .replay-controls select{font-size:12px;min-height:36px;padding:5px 8px}
+.daily-control-buttons button{min-width:0;padding:5px;font-size:12px}
+.daily-camera{gap:6px;font-size:11px}
+.daily-camera>.daily-control-time{display:none}
+.daily-camera button,.daily-camera select{min-height:32px;padding:4px 6px;font-size:11px}
+.daily-camera .daily-control-note{font-size:10px}
+.daily-control-buttons button[hidden],.daily-controls [hidden]{display:none!important}
+@media(max-width:1000px){.daily-header-time{display:none}.daily-check-switch a{font-size:11px;padding:8px}.brand h1{letter-spacing:0}}
+@media(max-width:767px){.daily-check-switch{flex-shrink:1}.daily-check-switch a{padding:7px 4px;font-size:10px}.brand-icon{display:none}.brand h1{max-width:120px;font-size:11px}.panel-core-app .replay-controls{grid-template-columns:auto auto minmax(30px,1fr) auto auto}.panel-core-app .replay-controls output{grid-column:1/-1;grid-row:auto}}

@@ -24,41 +24,6 @@
   };
 
   const SITES = {
-    penghu: {
-      id: 'penghu',
-      label: '澎湖 Penghu · © OpenStreetMap contributors · 內政部 20 m DTM (OGDL 1.0)',
-      attribution: '© OpenStreetMap contributors · 內政部 20 m DTM (OGDL 1.0)',
-      center: { lat: 23.475, lng: 119.55 },
-      dataBase: '../../data/penghu',
-      lakeZ: 0,
-      cameraTargetZ: 1,
-      cameraFloorZ: 0,
-      cameraFar: 220000,
-      cameraMaxDistance: 160000,
-      terrainRayMaxDistance: 220000,
-      cameraPosition: [0, -10000, 140000],
-      fog: false,
-      fogPolicy: 'off',
-      sky: false,
-      renderStyle: 'apple',
-      environment: { default: 'daylight' },
-      scenarios: false,
-      progressiveLoading: true,
-      meshopt: true,
-      faviconHref: 'data:,',
-      poiLabelScreenH: 0.014,
-      props: [],
-      layers: {
-        terrain: true, nodes: true, edges: true, buildings: true,
-        intersections: false, lake: false, docks: false, ropeway: false,
-      },
-      viewpoints: {
-        archipelago: { label: '澎湖群島', pos: [0, -10000, 140000], target: [0, 0, 1] },
-        magong: { label: '馬公', posAnchor: [23.5626, 119.5647], posOffset: [300, -1100], posZ: 1000, targetAnchor: [23.5626, 119.5647], targetZ: 1 },
-        wangan: { label: '望安', posAnchor: [23.3620, 119.5082], posOffset: [0, -2600], posZ: 3000, targetAnchor: [23.3620, 119.5082], targetZ: 1 },
-        qimei: { label: '七美', posAnchor: [23.1946, 119.4190], posOffset: [0, -2600], posZ: 3000, targetAnchor: [23.2067, 119.4245], targetZ: 1 },
-      },
-    },
     // Existing SML site — values lifted verbatim from base.js/main.js so the
     // default (?site=sml) behavior is byte-identical after the refactor.
     sml: {
@@ -85,18 +50,16 @@
       layers: {                      // which optional layers this site has
         terrain: true, nodes: true, edges: true, intersections: true,
         lake: true, buildings: true, docks: true, ropeway: true,
+        'twin-lineage': { required: false },
         supportStructures: true,     // M9 separate S7 retaining-wall asset
         junctionPlates: true,        // Stage-7 dressing; exact legacy fallback is metadata-driven
         edgeLabels: true,            // OSM road/trail names along edges (edge_names.json)
-        // Legacy SML-only optional resources. A declaration authorizes the
-        // request; required resources fail closed when unavailable. The
-        // terrain-fault census has always been absent for SML, so its explicit
-        // optional declaration preserves the accepted request/404 behavior.
+        // SML resources with source-owned artifacts. A declaration authorizes
+        // the request; required resources fail closed when unavailable.
         heroRailing: true,
         poiDescriptions: true,
         stairsStepCounts: true,
         edgeNames: true,
-        terrainFaults: { required: false },
         causalDiagnoses: true,
         reliefFaults: true,
         walkway3dOverrides: true,
@@ -136,6 +99,16 @@
       center: { lat: 22.6229171, lng: 120.5991429 },
       dataBase: '../../data/farm',
       canonicalManifest: '../../data/farm-canonical/manifest.json',
+      canonicalNoticeSummary: '模擬候選資料 · 非農場操作建議',
+      canonicalNotices: ['展示六塊田的模擬階段、擴散與通知。'],
+      // Declared canonical scenarios, picked with ?scenario=<id> in canonical
+      // mode; an undeclared id fails closed. Without the parameter the
+      // canonicalManifest above plays. Authority: Will, 2026-09-28: "hmm. the
+      // use cases are not clear. 巡田 is a feature, identify pest spread is another".
+      canonicalScenarios: {
+        pest: '../../data/farm-canonical-pest/manifest.json',
+        patrol: '../../data/farm-canonical-patrol/manifest.json',
+      },
       lakeZ: null,
       cameraTargetZ: 30,
       cameraFloorZ: 16.92,
@@ -143,6 +116,12 @@
       // Suppress the browser's implicit root favicon request for this offline
       // package without changing the legacy SML request/response behavior.
       faviconHref: 'data:,',
+      // Phones: render terrain and nodes first, then stream context layers and
+      // props (Will, 2026-09-27: "let's optimize for mobile"). No meshopt: the
+      // package GLBs are not EXT_meshopt_compression-packed. No
+      // startupNodeCount: the node count belongs to the mounted package, so a
+      // deployment registry pins it, not this entry.
+      progressiveLoading: true,
       // Farm export receipt records this package manifest as manifest.json
       // beside the exported assets (linked Farm receipt
       // reference/sources/receipts/farm-site-export-determinism-20260821.receipt.json:92-96).
@@ -150,12 +129,23 @@
       // Source: linked Farm profile context roles, plus the ruled optional
       // generic-edge package role from viewer lane brief 2.
       // reference/sources/derived/site-bake-pipeline/farm.site-profile.v1.json:587-595;
-      // These are declarations only—the manifest supplies each admitted path;
-      // generic-edge is inert when the package manifest has no such record.
-      contextLayerRoles: [
-        'painted-terrain', 'context-roads', 'generic-edge', 'river-zone-paint', 'river-ribbon',
-        'trees', 'white-context-buildings', 'supported-labels', 'farm-field-ridges',
-      ],
+      // Will's #200 closing comment (issue comment 5889322216), after DT PR
+      // #207 made context toggles declaration-driven: declare context-waterways
+      // here with a label so its generated toggle reads well.
+      // These declarations admit roles only; the manifest supplies each path,
+      // and an optional role is inert when its record is absent.
+      contextLayerRoles: {
+        'painted-terrain': true,
+        'context-roads': true,
+        'generic-edge': true,
+        'river-zone-paint': true,
+        'river-ribbon': true,
+        trees: true,
+        'white-context-buildings': true,
+        'supported-labels': true,
+        'farm-field-ridges': true,
+        'context-waterways': { label: '水路' },
+      },
       layers: {
         terrain: true, nodes: true, edges: true, intersections: true,
         lake: false, buildings: false, docks: false, ropeway: false,
@@ -184,16 +174,23 @@
         { id: 'urn:npust:smart-agriculture-management-platform:director-assertion:farm-parking-outline-presentation-v1', label: 'urn:npust:smart-agriculture-management-platform:director-assertion:farm-parking-outline-presentation-v1', path: 'props/presentations/sha256-80b46e4003954e4707b05f30f5890113158f977d837d14baeb0572e10165c3f3.glb', visible: true, origin_kind: 'DirectorAssertion' },
         { id: 'urn:npust:smart-agriculture-management-platform:director-assertion:farm-site-perimeter-presentation-v1', label: 'urn:npust:smart-agriculture-management-platform:director-assertion:farm-site-perimeter-presentation-v1', path: 'props/presentations/sha256-afd039c2a9c0bbba615ddded5cd8a8c1fad9108e5e985031f4b2c07d5205e5f2.glb', visible: true, origin_kind: 'DirectorAssertion' },
         { id: 'urn:npust:smart-agriculture-management-platform:face:education-pavilion-footprint', label: '模擬食農教育亭 footprint', path: 'props/faces/sha256-2b452b7d25f8cb7e5fa62dc7410cae8c7b9745c595d2a008844fda56f00b92c1.glb', visible: true, origin_kind: 'Face' },
-        { id: 'urn:npust:smart-agriculture-management-platform:face:field-alpha', label: '模擬田區 A', path: 'props/faces/sha256-aba6b698b589b561e01b53a42e3f790fcd13ac96204a68957317b97cd4dc0b0f.glb', visible: true, origin_kind: 'Face' },
-        { id: 'urn:npust:smart-agriculture-management-platform:face:field-beta', label: '模擬田區 B', path: 'props/faces/sha256-f8764211391a60986b2919f3f5fe972138c1b8b81ef301c2266b1359919d659d.glb', visible: true, origin_kind: 'Face' },
-        { id: 'urn:npust:smart-agriculture-management-platform:face:field-gamma', label: '模擬田區 C', path: 'props/faces/sha256-88e1dc93c0eea27d3c28c5ba30b9a4d9478f38264ae32b6e7a1167f628e61959.glb', visible: true, origin_kind: 'Face' },
-        { id: 'urn:npust:smart-agriculture-management-platform:face:field-delta', label: '模擬田區 D', path: 'props/faces/sha256-9b386b2df02857a4d8e59508bb1eb553f2958f167dfc1e5922d7471e0ccd5ce9.glb', visible: true, origin_kind: 'Face' },
+        { id: 'urn:npust:smart-agriculture-management-platform:face:field-eta', label: '模擬田區 1', path: 'props/faces/sha256-ebf37449f80091efdeb4e2d242d0c9159b53035a15f0c8c5e0010bb36aeaae00.glb', visible: true, origin_kind: 'Face' },
+        { id: 'urn:npust:smart-agriculture-management-platform:face:field-alpha', label: '模擬田區 2', path: 'props/faces/sha256-aba6b698b589b561e01b53a42e3f790fcd13ac96204a68957317b97cd4dc0b0f.glb', visible: true, origin_kind: 'Face' },
+        { id: 'urn:npust:smart-agriculture-management-platform:face:field-theta', label: '模擬田區 3', path: 'props/faces/sha256-7ede008cec2d9390053806064f9261999687c28af73c732a9a6742bbea2f2dd2.glb', visible: true, origin_kind: 'Face' },
         { id: 'urn:npust:smart-agriculture-management-platform:face:greenhouse-bay-a', label: 'urn:npust:smart-agriculture-management-platform:face:greenhouse-bay-a', path: 'props/faces/sha256-22dda1b2ffdc081ad22c17d44bb1900d19b5dec1fca05eb0808279474f340b9d.glb', visible: true, origin_kind: 'Face' },
         { id: 'urn:npust:smart-agriculture-management-platform:face:greenhouse-bay-b', label: 'urn:npust:smart-agriculture-management-platform:face:greenhouse-bay-b', path: 'props/faces/sha256-856ca1292a7150a667f8acbf9621c41f605b1493483cab2be147e9196fa13de9.glb', visible: true, origin_kind: 'Face' },
         { id: 'urn:npust:smart-agriculture-management-platform:face:guesthouse-footprint', label: 'urn:npust:smart-agriculture-management-platform:face:guesthouse-footprint', path: 'props/faces/sha256-11a7858e58713962eecbaf019516a2083a79893545239337ab8fa03a46be04c9.glb', visible: true, origin_kind: 'Face' },
       ],
       viewpoints: {
-        aerial: { label: '農場近距斜視', pos: [-130.008, -199.946, 192.5], target: [19.992, 0.054, 30] },
+        // portrait: a close oblique view for a phone held upright (Will,
+        // 2026-09-28 lane design: default 農場近距斜視 shows the fields in
+        // portrait at 390 px). Seen from the south-south-east, it puts
+        // 田區1/2/3, both greenhouse bays, the mock neighbour field (where the
+        // pest story starts), the buildings and the full
+        // 六堆雅歌園有機教育農場 / 雅歌園民宿 labels between y 70 and 330 of a
+        // 390 x 788 frame: the strip the farm panel's deck leaves uncovered.
+        aerial: { label: '農場近距斜視', pos: [-130.008, -199.946, 192.5], target: [19.992, 0.054, 30],
+          portrait: { pos: [73.4, -213, 232.1], target: [8, -63, 30] } },
       },
     },
 
@@ -279,22 +276,167 @@
   };
 
   // ── Pure core (testable) ───────────────────────────────────────
+  // Views a twin inspection is composed from (twin-inspection-contract); equal
+  // to INSPECTOR_VIEWS in docs/viewer-common/label-binding.js.
+  const INSPECTOR_VIEW_NAMES = Object.freeze(['descriptive', 'node', 'typed', 'sources']);
+  const CONTEXT_LAYER_ROLES = Object.freeze([
+    'painted-terrain', 'context-roads', 'generic-edge', 'river-zone-paint',
+    'river-ribbon', 'trees', 'white-context-buildings', 'supported-labels',
+    'farm-field-ridges', 'context-waterways',
+  ]);
+
+  function reportFatalLoad(error) {
+    if (typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+    const overlay = document.getElementById('loading');
+    if (!overlay) return;
+    const message = typeof error?.message === 'string' ? error.message : String(error);
+    const errorPanel = document.getElementById('loading-error');
+    const errorMessage = document.getElementById('loading-error-message');
+    const progressBar = document.getElementById('loading-bar');
+    const progressText = document.getElementById('loading-status');
+    if (errorMessage) errorMessage.textContent = message;
+    if (progressText) {
+      progressText.textContent = `Error: ${message}`;
+      progressText.hidden = true;
+    }
+    if (progressBar) progressBar.hidden = true;
+    if (errorPanel) errorPanel.hidden = false;
+    overlay.classList.remove('done');
+  }
+
+  function setLoadingTitle(site) {
+    if (typeof document === 'undefined') return;
+    if (!site || typeof site.label !== 'string' || !site.label.trim()) return;
+    document.title = `${site.label} — Digital Twin Viewer`;
+    const loadingTitle = typeof document.getElementById === 'function'
+      ? document.getElementById('loading-title') : null;
+    const hudTitle = typeof document.querySelector === 'function'
+      ? document.querySelector('#hud h1') : null;
+    if (loadingTitle) loadingTitle.textContent = `Loading ${site.label}…`;
+    if (hudTitle) hudTitle.textContent = site.label;
+  }
+
+  function setLoadingTitleFromRegistry(registry) {
+    const siteId = new URLSearchParams(window.location.search).get('site') || registry?.defaultSite;
+    const site = registry?.sites?.[siteId];
+    setLoadingTitle(site);
+  }
+
+  if (typeof window !== 'undefined') window.DT_reportFatalLoad = reportFatalLoad;
+
   function validateRegistry(registry) {
     const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
     const fail = () => { throw new Error('DT viewer: malformed deployment registry'); };
+    const nonEmpty = v => typeof v === 'string' && v.length > 0;
+    // Optional camera envelope, as main.js/base.js consume it: each is read with
+    // `?? default` (null or absent = default); cameraFar is the far plane beyond
+    // the fixed 10 m near plane, cameraMaxDistance and terrainRayMaxDistance are
+    // distances, and cameraPosition is spread into camera.position.set(x, y, z).
+    const optional = (value, valid) => value === undefined || value === null || valid(value);
+    const distance = v => Number.isFinite(v) && v > 0;
+    const cameraValid = site =>
+      optional(site.cameraFar, v => Number.isFinite(v) && v > 10) &&
+      optional(site.cameraMaxDistance, distance) &&
+      optional(site.terrainRayMaxDistance, distance) &&
+      optional(site.cameraPosition, v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite));
+    // Optional `inspector: { views }`: a non-empty list of distinct known view
+    // names. `views` is the only key; later phases extend the object on purpose.
+    // Optional canonical declarations: a manifest path, and a scenario
+    // allowlist of id -> manifest path (ids are URL-safe lowercase names).
+    const path = v => typeof v === 'string' && v.length > 0;
+    const nonBlankPath = v => typeof v === 'string' && v.trim() !== '';
+    const scenariosValid = scenarios => scenarios === undefined || (object(scenarios) &&
+      Object.entries(scenarios).every(([id, manifest]) => /^[a-z0-9][a-z0-9_-]*$/.test(id) && path(manifest)));
+    const gzipAssetDeclarationCheck = paths => paths === undefined || (Array.isArray(paths) &&
+      paths.length > 0 && new Set(paths).size === paths.length &&
+      paths.every(p => typeof p === 'string' && p.endsWith('.json') &&
+        p.split('/').every(part => /^[a-zA-Z0-9_.-]+$/.test(part) && part !== '.' && part !== '..')));
+    const meshoptDeclarationCheck = value => value === undefined || typeof value === 'boolean';
+    const vector = v => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite);
+    // Optional portrait variant of a local {pos, target} viewpoint (geo-anchored
+    // presets have none): {pos, target} local vectors.
+    const viewpointsValid = viewpoints => viewpoints === undefined || (object(viewpoints) &&
+      Object.values(viewpoints).every(vp => object(vp) && (vp.portrait === undefined ||
+        (vp.pos && vp.target && object(vp.portrait) && vector(vp.portrait.pos) && vector(vp.portrait.target)))));
+    const inspectorValid = inspector => inspector === undefined || (object(inspector) &&
+      Object.keys(inspector).length === 1 && Array.isArray(inspector.views) &&
+      inspector.views.length > 0 && new Set(inspector.views).size === inspector.views.length &&
+      inspector.views.every(view => INSPECTOR_VIEW_NAMES.includes(view)));
+    const layerMapValid = layers => object(layers) && Object.values(layers).every(value =>
+      typeof value === 'boolean' || (object(value) &&
+        (!Object.hasOwn(value, 'enabled') || typeof value.enabled === 'boolean') &&
+        (!Object.hasOwn(value, 'required') || typeof value.required === 'boolean')));
+    const contextRolesValid = declarations => declarations === undefined ||
+      (Array.isArray(declarations)
+        ? new Set(declarations).size === declarations.length &&
+          declarations.every(role => CONTEXT_LAYER_ROLES.includes(role))
+        : object(declarations) && Object.entries(declarations).every(([role, declaration]) => {
+          if (!CONTEXT_LAYER_ROLES.includes(role)) return false;
+          if (declaration === null || typeof declaration === 'boolean') return true;
+          return object(declaration) &&
+            (!Object.hasOwn(declaration, 'enabled') || typeof declaration.enabled === 'boolean') &&
+            (!Object.hasOwn(declaration, 'required') || typeof declaration.required === 'boolean') &&
+            (!Object.hasOwn(declaration, 'label') ||
+              (typeof declaration.label === 'string' && declaration.label.trim() !== ''));
+        }));
+    const propValid = prop => object(prop) && nonEmpty(prop.id) && nonEmpty(prop.label) &&
+      nonEmpty(prop.path) && prop.path.endsWith('.glb') && typeof prop.visible === 'boolean' &&
+      ['twin', 'authority_scope', 'origin_kind', 'context_role', 'source_ref', 'notice_ref',
+        'appearance_provenance_ref'].every(field => !Object.hasOwn(prop, field) || nonEmpty(prop[field])) &&
+      (!Object.hasOwn(prop, 'preserve_declared_appearance') ||
+        typeof prop.preserve_declared_appearance === 'boolean');
+    const splatValid = splat => object(splat) && nonEmpty(splat.id) && nonEmpty(splat.label) &&
+      nonEmpty(splat.path) && splat.path.endsWith('.ksplat') &&
+      (!Object.hasOwn(splat, 'twin') || nonEmpty(splat.twin)) &&
+      (!Object.hasOwn(splat, 'meshProps') || (Array.isArray(splat.meshProps) &&
+        new Set(splat.meshProps).size === splat.meshProps.length && splat.meshProps.every(nonEmpty)));
     if (!object(registry) || !object(registry.sites) ||
         !Object.hasOwn(registry.sites, registry.defaultSite)) fail();
+    const legacySiteIds = [];
     for (const [id, site] of Object.entries(registry.sites)) {
-      if (!object(site) || site.id !== id || !site.label ||
+      if (Object.hasOwn(site || {}, 'dtContract')) {
+        if (site.dtContract !== 1) {
+          throw new Error(
+            `Registry declares dtContract ${String(site.dtContract)}; this viewer supports 1 (site '${id}').`,
+          );
+        }
+      } else {
+        legacySiteIds.push(id);
+      }
+      if (!object(site) || id.length === 0 || site.id !== id || typeof site.label !== 'string' ||
+          site.label.trim() === '' ||
           !object(site.center) || !Number.isFinite(site.center.lat) ||
           !Number.isFinite(site.center.lng) || typeof site.dataBase !== 'string' ||
-          !site.dataBase || !object(site.layers) ||
+          !site.dataBase || !layerMapValid(site.layers) ||
           !Number.isFinite(site.cameraTargetZ) || !Number.isFinite(site.cameraFloorZ) ||
           !(site.lakeZ === null || Number.isFinite(site.lakeZ)) ||
-          typeof site.scenarios !== 'boolean') fail();
+          typeof site.scenarios !== 'boolean' || !cameraValid(site) || !inspectorValid(site.inspector) ||
+          !optional(site.canonicalManifest, path) || !scenariosValid(site.canonicalScenarios) ||
+          (site.canonicalNoticeSummary !== undefined && !nonEmpty(site.canonicalNoticeSummary)) ||
+          (site.canonicalNotices !== undefined && (!Array.isArray(site.canonicalNotices) ||
+            !site.canonicalNotices.every(notice => typeof notice === 'string'))) ||
+          (site.contextLayerManifest !== undefined && !nonBlankPath(site.contextLayerManifest)) ||
+          !contextRolesValid(site.contextLayerRoles) ||
+          (site.props !== undefined && (!Array.isArray(site.props) || !site.props.every(propValid))) ||
+          (site.splats !== undefined && (!Array.isArray(site.splats) || !site.splats.every(splatValid))) ||
+          !meshoptDeclarationCheck(site.meshopt) ||
+          !gzipAssetDeclarationCheck(site.gzipAssets) ||
+          !viewpointsValid(site.viewpoints) ||
+          (site.startupNodeCount !== undefined &&
+            !(Number.isInteger(site.startupNodeCount) && site.startupNodeCount > 0))) fail();
     }
-    return registry;
+    const warnings = legacySiteIds.length ? [{
+      code: 'missing-dtContract',
+      scope: 'registry',
+      siteIds: legacySiteIds,
+      message: `[dt-contract] registry omits dtContract; interpreting as major 1 for sites: ${legacySiteIds.join(', ')}`,
+    }] : [];
+    return { ...registry, warnings };
   }
+
+  // Built-in DT-owned entries cross the same contract boundary as injected
+  // deployments. Their legacy omissions are reported by browser wiring below.
+  const BUILTIN_REGISTRY = validateRegistry({ defaultSite: 'sml', sites: SITES });
 
   function resolveSite(search, sites, defaultSite = 'sml') {
     sites = sites || SITES;
@@ -303,7 +445,8 @@
     const site = Object.hasOwn(sites, siteId) ? sites[siteId] : null;
     if (!site) {
       throw new Error(
-        `DT viewer: unknown ?site=${siteId}. Known: ${Object.keys(sites).join(', ')}`);
+        `DT viewer: unknown ?site=${siteId}. Known: ${Object.keys(sites).join(', ')}.`
+        + " Refusing an undeclared site to prevent loading undeclared data or fallback to another site's data.");
     }
     return site;
   }
@@ -428,39 +571,46 @@
 
   // ── Browser wiring: synchronous globals before base.js/main.js ──
   if (typeof window !== 'undefined' && window.location) {
-    const registry = Object.hasOwn(window, 'DT_DEPLOYMENT')
-      ? validateRegistry(window.DT_DEPLOYMENT) : { sites: SITES, defaultSite: 'sml' };
-    const site = resolveSite(window.location.search, registry.sites, registry.defaultSite);
-    window.DT_SITE = site;
-    window.DT_SITES = registry.sites;
-    // Render style: resolved palette on DT_STYLE (name included). 'apple' =
-    // Apple Maps 3D grade. base.js ignores this by design (diagnostic scene).
-    window.DT_STYLE = resolveRenderStyle(window.location.search, site);
-    window.DT_RENDER_STYLE = window.DT_STYLE.name;
-    window.DT_ENV = resolveEnvironment(window.location.search, site);
-    window.DT_assetUrl = makeAssetUrl(site);
-    window.DT_geoToLocal = makeGeoToLocal(site);
-    window.DT_localToGeo = makeLocalToGeo(site);
-    window.DT_hasLayer = makeHasLayer(site);
-    window.DT_optionalResource = makeOptionalResourceResolver(site);
-    if (site.faviconHref) {
-      const favicon = document.createElement('link');
-      favicon.rel = 'icon';
-      favicon.href = site.faviconHref;
-      document.head.appendChild(favicon);
+    try {
+      const hasDeployment = Object.hasOwn(window, 'DT_DEPLOYMENT');
+      const sourceRegistry = hasDeployment ? window.DT_DEPLOYMENT : BUILTIN_REGISTRY;
+      // A valid selected entry can name the loading overlay even when another
+      // registry check rejects the deployment before runtime globals exist.
+      setLoadingTitleFromRegistry(sourceRegistry);
+      const registry = hasDeployment ? validateRegistry(sourceRegistry) : BUILTIN_REGISTRY;
+      for (const warning of registry.warnings) console.warn(warning.message);
+      const site = resolveSite(window.location.search, registry.sites, registry.defaultSite);
+      window.DT_SITE = site;
+      window.DT_SITES = registry.sites;
+      // Render style: resolved palette on DT_STYLE (name included). 'apple' =
+      // Apple Maps 3D grade. base.js ignores this by design (diagnostic scene).
+      window.DT_STYLE = resolveRenderStyle(window.location.search, site);
+      window.DT_RENDER_STYLE = window.DT_STYLE.name;
+      window.DT_ENV = resolveEnvironment(window.location.search, site);
+      window.DT_assetUrl = makeAssetUrl(site);
+      window.DT_geoToLocal = makeGeoToLocal(site);
+      window.DT_localToGeo = makeLocalToGeo(site);
+      window.DT_hasLayer = makeHasLayer(site);
+      window.DT_optionalResource = makeOptionalResourceResolver(site);
+      if (site.faviconHref) {
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.href = site.faviconHref;
+        document.head.appendChild(favicon);
+      }
+      // Drive page chrome from the active registry entry.
+      setLoadingTitle(site);
+      console.log(
+        `[DT viewer] site=${site.id} center=(${site.center.lat},${site.center.lng}) dataBase=${site.dataBase} env=${window.DT_ENV.name}`);
+    } catch (error) {
+      reportFatalLoad(error);
+      throw error;
     }
-    // Drive the UI label from the site (was hardcoded "日月潭 3D" in index.html).
-    document.title = `${site.label} — Digital Twin Viewer`;
-    const _txt = (sel, t) => { const el = document.querySelector(sel); if (el) el.textContent = t; };
-    _txt('#loading > div', `Loading ${site.label}...`);
-    _txt('#hud h1', site.label);
-    console.log(
-      `[DT viewer] site=${site.id} center=(${site.center.lat},${site.center.lng}) dataBase=${site.dataBase} env=${window.DT_ENV.name}`);
   }
 
   // ── Node (tests): export the pure core. Browsers ignore `module`. ──
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { validateRegistry, SITES, resolveSite, makeAssetUrl, makeGeoToLocal, makeLocalToGeo, makeHasLayer,
+    module.exports = { validateRegistry, BUILTIN_REGISTRY, INSPECTOR_VIEW_NAMES, SITES, resolveSite, makeAssetUrl, makeGeoToLocal, makeLocalToGeo, makeHasLayer,
                        makeOptionalResourceResolver,
                        RENDER_STYLES, resolveRenderStyle, ENVIRONMENTS,
                        resolveEnvironment, M_PER_DEG_LAT };

@@ -9,9 +9,13 @@
 <body>
 
 <div id="loading">
-  <div>Loading 日月潭 base stage...</div>
+  <div id="loading-title">Loading…</div>
   <div id="loading-bar"><div id="loading-fill"></div></div>
   <div id="loading-status">Initializing...</div>
+  <div id="loading-error" role="alert" aria-live="assertive" hidden>
+    <h2 id="loading-error-heading">This site can't be loaded</h2>
+    <div id="loading-error-message"></div>
+  </div>
 </div>
 
 <div id="canvas-container"></div>

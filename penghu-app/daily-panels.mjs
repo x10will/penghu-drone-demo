@@ -9,6 +9,11 @@ const RESOURCE_STATUS = {
   receiving: '驗收中', parked: '停車', 'recovery-required': '待回收',
 };
 const resultStatus = status => status === 'delivered' ? '完成驗收' : '待專業評估';
+const resourceType = source => source.typeLabel ?? (source.type === 'drone' ? '無人機' : source.id === 'V-01' ? '配送車' : '接駁車');
+const resourceStatus = current => RESOURCE_STATUS[current.status] ?? current.status;
+const resourceActivity = current => current.activity && current.activity !== resourceStatus(current) ? current.activity : '';
+const resourcePosition = (run, current) => current.siteId ? siteName(run.fixture, current.siteId) :
+  `${round(current.position.lat, 4)}, ${round(current.position.lng, 4)} · ${round(current.position.altitudeM, 0)} m`;
 const round = (value, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '—';
 const text = (tag, className, value) => {
   const node = document.createElement(tag);
@@ -50,7 +55,7 @@ function siteName(fixture, id) {
     fixture.resources.find(resource => resource.id === id)?.label ?? (id || '移動中');
 }
 
-function renderChart(trace, bounds) {
+function renderChart(trace, bounds, endMin) {
   const root = text('div', 'daily-thermal');
   const heading = text('div', 'daily-thermal-heading');
   const title = text('strong', '', '模擬溫度軌跡');
@@ -76,6 +81,9 @@ function renderChart(trace, bounds) {
   return {
     root,
     update(timeMin, temperatureC) {
+      forecast.hidden = timeMin < endMin;
+      forecast.style.display = timeMin < endMin ? 'none' : '';
+      set(note, timeMin < endMin ? '顯示目前播放時間以前的溫度紀錄。' : '淡線為全日紀錄；亮線為已播放紀錄。');
       const visible = samples.filter(item => item.timeMin <= timeMin);
       if (Number.isFinite(temperatureC) && timeMin >= first) visible.push({timeMin, celsius: temperatureC});
       elapsed.setAttribute('points', points(visible));
@@ -104,7 +112,7 @@ function makeOrderDetail(run, order) {
   const receiving = makeLine('驗收完成', '—');
   const exposure = makeLine('累計超界', '—');
   info.append(deadline.row, window.row, packageLine.row, status.row, custodian.row, receiving.row, exposure.row);
-  const chart = renderChart(run.traces[order.id], run.fixture.profile.temperatureBoundsC);
+  const chart = renderChart(run.traces[order.id], run.fixture.profile.temperatureBoundsC, run.endMin);
   const custodyTitle = text('h4', '', '保管交接 · 含預計行程');
   const custody = text('ol', 'daily-custody');
   const custodyRows = run.traces[order.id].custody.map(segment => {
@@ -120,15 +128,18 @@ function makeOrderDetail(run, order) {
     update(snapshotOrder, timeMin) {
       set(status.output, ORDER_STATUS[snapshotOrder?.status] ?? snapshotOrder?.status ?? '—');
       set(custodian.output, snapshotOrder?.custodianId ? siteName(run.fixture, snapshotOrder.custodianId) : '尚未分配');
-      set(receiving.output, snapshotOrder?.deliveredAtMin == null ? `預估 ${minuteLabel(outcome.deliveredAtMin)}` : minuteLabel(snapshotOrder.deliveredAtMin));
+      set(receiving.output, snapshotOrder?.deliveredAtMin == null ? '尚未驗收' : minuteLabel(snapshotOrder.deliveredAtMin));
       set(exposure.output, `${round(snapshotOrder?.excursionMinutes ?? 0, 1)} 分鐘`);
       chart.update(timeMin, snapshotOrder?.temperatureC);
       for (const {segment, item} of custodyRows) {
         item.classList.toggle('is-current', segment.startMin <= timeMin && timeMin < segment.endMin);
         set(item, `${segment.startMin > timeMin ? '預計 ' : ''}${minuteLabel(segment.startMin)}–${minuteLabel(segment.endMin)}　${segment.label ?? segment.custodianId}`);
       }
-      forecast.dataset.phase = timeMin >= run.endMin ? 'final' : 'forecast';
-      set(forecast, `${timeMin >= run.endMin ? '日終結果' : '全日推演'}：${resultStatus(outcome.status)} · ${minuteLabel(outcome.deliveredAtMin)} 驗收 · ${outcome.onTime ? '期限內' : '逾期限'} · ${round(outcome.minTemperatureC, 2)}–${round(outcome.maxTemperatureC, 2)} °C`);
+      const atEnd = timeMin >= run.endMin - 1e-7;
+      forecast.hidden = !atEnd;
+      exceptions.hidden = !atEnd;
+      forecast.dataset.phase = 'final';
+      set(forecast, `日終結果：${resultStatus(outcome.status)} · ${minuteLabel(outcome.deliveredAtMin)} 驗收 · ${outcome.onTime ? '期限內' : '逾期限'} · ${round(outcome.minTemperatureC, 2)}–${round(outcome.maxTemperatureC, 2)} °C`);
     },
   };
 }
@@ -144,12 +155,6 @@ function createPlanPanel({run, store, actions}) {
       const now = text('output', 'daily-now', minuteLabel(run.startMin));
       mast.append(title, now);
       const phase = text('p', 'daily-phase', '固定計畫 · 無人機交接優先');
-      const shortcuts = text('div', 'daily-shortcuts');
-      const replay = text('button', '', '從頭播放'); replay.type = 'button';
-      replay.addEventListener('click', () => actions.replay());
-      const toEnd = text('button', '', '日終結果'); toEnd.type = 'button';
-      toEnd.addEventListener('click', () => { actions.seekMinute(run.endMin); summary.scrollIntoView({block: 'nearest'}); });
-      shortcuts.append(replay, toEnd);
       const stock = text('div', 'daily-metrics');
       const batch = makeMetric('到貨批次', `${run.fixture.batch.quantity} 劑`);
       const allocated = makeMetric('兩筆訂單', `${run.fixture.orders.reduce((sum, item) => sum + item.quantity, 0)} 劑`);
@@ -199,7 +204,10 @@ function createPlanPanel({run, store, actions}) {
         summaryFleet.append(text('li', '', `${item.id} · ${siteName(run.fixture, item.siteId)} · ${RESOURCE_STATUS[item.status] ?? item.status} · ${round(item.energyWh, 1)} Wh（保留 ${round(item.reserveWh, 1)} Wh，${item.reserveMet ? '達標' : '未達標'}）`));
       }
       const notes = text('p', 'daily-summary-notes', run.summary.notes.join(' '));
-      summary.append(summaryTitle, summaryLedger, summaryOrders, summaryFleet, notes);
+      const summaryHint = text('p', 'daily-summary-hint', '尚未到日終。使用地圖播放列的「日終」查看日終結果。');
+      const summaryBody = text('div', 'daily-summary-body');
+      summaryBody.append(summaryLedger, summaryOrders, summaryFleet, notes);
+      summary.append(summaryTitle, summaryHint, summaryBody);
 
       const inputs = text('details', 'daily-inputs');
       const inputsTitle = text('summary', '', '查看模擬輸入與假設');
@@ -220,7 +228,7 @@ function createPlanPanel({run, store, actions}) {
       inputs.append(inputsTitle, inputsBody);
       // Keep changing order/status content below the event list so a click does
       // not move its own target. The full history lives in a separate panel.
-      root.append(mast, shortcuts, stock, release, eventsTitle, eventList, ordersTitle, orders, phase, summary, inputs);
+      root.append(mast, stock, release, eventsTitle, eventList, ordersTitle, orders, phase, summary, inputs);
       container.append(root);
 
       const stop = store.subscribe(state => {
@@ -234,14 +242,16 @@ function createPlanPanel({run, store, actions}) {
           row.button.classList.toggle('is-selected', id === selectedOrderId);
           row.button.setAttribute('aria-pressed', String(id === selectedOrderId));
           set(row.status, ORDER_STATUS[current?.status] ?? current?.status ?? '—');
-          set(row.eta, `${current?.deliveredAtMin == null ? '預估' : '已於'} ${minuteLabel(row.outcome.deliveredAtMin)} 驗收 · 期限 ${minuteLabel(row.outcome.deadlineMin)}`);
+          set(row.eta, `${current?.deliveredAtMin == null ? '' : `已於 ${minuteLabel(current.deliveredAtMin)} 驗收 · `}期限 ${minuteLabel(row.outcome.deadlineMin)}`);
         }
         for (const {event, item, button} of eventRows) {
           item.classList.toggle('is-past', event.timeMin <= snapshot.timeMin);
           button.classList.toggle('is-selected', event.id === selectedEventId);
           button.setAttribute('aria-pressed', String(event.id === selectedEventId));
         }
-        set(summaryTitle, atEnd ? '18:00 日終結果' : '全日推演結果 · 尚未到日終');
+        set(summaryTitle, atEnd ? `${minuteLabel(run.endMin)} 日終結果` : '尚未到日終');
+        summaryHint.hidden = atEnd;
+        summaryBody.hidden = !atEnd;
       });
       return {root, stop};
     },
@@ -287,73 +297,98 @@ function createOrderPanel({run, store, actions}) {
   };
 }
 
-function createResourcePanel({run, store, actions}) {
+function createResourceStatusPanel({run, store, actions}) {
   return {
-    id: 'resource', title: '運具狀態', icon: '▣', defaultSize: {w: 4, h: 4}, streams: [],
-    render(container, ctx) {
-      const source = run.fixture.resources.find(item => item.id === ctx.entry.resourceId);
-      if (!source) return {stop: () => {}};
-      const root = text('div', 'daily-resource');
-      const heading = text('div', 'daily-resource-heading');
-      heading.append(text('strong', '', source.label), text('span', 'daily-resource-kind', source.type === 'drone' ? '無人機' : '接駁車'));
-      const status = text('p', 'daily-resource-status', '待命');
-      const activity = text('p', 'daily-resource-activity', '—');
-      const metrics = text('div', 'daily-metrics');
-      const energy = makeMetric('剩餘能源', '—');
-      const reserve = makeMetric('高於保留量', '—');
-      metrics.append(energy.box, reserve.box);
-      const gauge = text('progress', 'daily-energy-gauge');
-      gauge.max = 100;
-      const facts = text('dl', 'daily-kv');
-      const position = makeLine('目前位置', '—');
-      const cargo = makeLine('載運訂單', '—');
-      const capacity = makeLine('模擬載運上限', `${round(source.capacityKg, 1)} kg · ${round(source.capacityL, 1)} L`);
-      facts.append(position.row, cargo.row, capacity.row);
-      const focus = text('button', 'daily-focus', '地圖聚焦此運具');
-      focus.type = 'button';
-      focus.addEventListener('click', () => actions.selectResource(source.id));
-      const scheduleTitle = text('h3', '', '當日行程');
-      const schedule = text('ol', 'daily-resource-schedule');
-      const rows = run.events.filter(event => event.resourceIds.includes(source.id)).map(event => {
-        const li = text('li');
-        const button = text('button', 'daily-resource-event', `${minuteLabel(event.timeMin)}　${event.label}`);
+    id: 'resourceStatus', title: '運具狀態', icon: '▣', defaultSize: {w: 8, h: 4}, streams: [],
+    render(container, ctx = {}) {
+      const resourceIds = ctx.entry?.resourceIds ?? ctx.resourceIds;
+      const sources = run.fixture.resources.filter(source => !resourceIds || resourceIds.includes(source.id));
+      const root = text('div', 'daily-resource daily-resource-status-panel');
+      const list = text('div', 'daily-resource-list');
+      list.setAttribute('aria-label', '選擇運具');
+      const header = text('div', 'daily-resource-row daily-resource-table-heading');
+      for (const label of ['運具', '類型', '狀態', '剩餘能源', '目前位置']) header.append(text('span', '', label));
+      list.append(header);
+      const rows = sources.map(source => {
+        const button = text('button', 'daily-resource-row');
         button.type = 'button';
-        button.addEventListener('click', () => actions.seekMinute(event.timeMin, event.id));
-        li.append(button);
-        schedule.append(li);
-        return {event, li};
+        button.dataset.resourceId = source.id;
+        const status = text('span', 'daily-resource-row-status');
+        const energy = text('span', 'daily-resource-row-energy');
+        const position = text('span', 'daily-resource-row-position');
+        button.append(text('strong', '', source.label), text('span', 'daily-resource-row-kind', resourceType(source)), status, energy, position);
+        button.addEventListener('click', () => actions.selectResource(source.id));
+        list.append(button);
+        return {source, button, status, energy, position};
       });
-      const outcome = run.summary.resources.find(item => item.id === source.id);
+      const detail = text('section', 'daily-resource-selected-detail');
+      const heading = text('h3', 'daily-resource-detail-heading');
+      const activity = text('p', 'daily-resource-activity');
+      const facts = text('dl', 'daily-kv daily-resource-detail-facts');
+      const cargo = makeLine('載運訂單');
+      const capacity = makeLine('模擬載運上限');
+      const standby = makeLine('待機耗電');
+      const reserve = makeLine('能源保留量');
+      facts.append(cargo.row, capacity.row, standby.row, reserve.row);
+      const scheduleTitle = text('h4', '', '當日行程 · 點選可跳轉');
+      const schedule = text('ol', 'daily-resource-schedule');
       const end = text('p', 'daily-resource-end');
-      const recovery = source.id === 'D-01' ? text('p', 'daily-recovery-note', 'D-01 本日停留七美轉運點，需另行回收；未模擬返航。') : null;
-      root.append(heading, status, activity, metrics, gauge, facts, focus, scheduleTitle, schedule, end);
-      if (recovery) root.append(recovery);
+      detail.append(heading, activity, facts, scheduleTitle, schedule, end);
+      root.append(list, detail);
       container.append(root);
+      let selectedId = sources.find(source => source.id === store.get().camera?.resourceId)?.id ?? sources[0]?.id;
+      let renderedId = null;
+      let eventRows = [];
       const stop = store.subscribe(state => {
-        const snapshot = state.snapshot;
-        const current = snapshot.resources.find(item => item.id === source.id);
-        if (!current) return;
-        set(status, RESOURCE_STATUS[current.status] ?? current.status);
-        set(activity, current.activity || '—');
-        set(energy.output, `${round(current.energyWh, 1)} Wh`);
-        set(reserve.output, `${round(current.energyWh - current.reserveWh, 1)} Wh`);
-        reserve.box.dataset.state = current.energyWh >= current.reserveWh ? 'ok' : 'alert';
-        gauge.value = Math.max(0, Math.min(100, current.energyPercent));
-        gauge.setAttribute('aria-label', `剩餘能源 ${round(current.energyPercent, 1)}%`);
-        set(position.output, current.siteId ? siteName(run.fixture, current.siteId) : `${round(current.position.lat, 4)}, ${round(current.position.lng, 4)} · ${round(current.position.altitudeM, 0)} m`);
-        set(cargo.output, current.orderIds.length ? current.orderIds.join('、') : '無');
-        focus.setAttribute('aria-pressed', String(state.focusedResourceId === source.id));
-        for (const {event, li} of rows) li.classList.toggle('is-past', event.timeMin <= snapshot.timeMin);
-        set(end, `${snapshot.timeMin >= run.endMin ? '日終' : '全日推演'}：${siteName(run.fixture, outcome.siteId)} · ${RESOURCE_STATUS[outcome.status] ?? outcome.status} · ${round(outcome.energyWh, 1)} Wh（保留 ${round(outcome.reserveWh, 1)} Wh）`);
+        const {snapshot} = state;
+        const requestedId = state.focusedResourceId ?? state.camera?.resourceId;
+        if (sources.some(source => source.id === requestedId)) selectedId = requestedId;
+        for (const row of rows) {
+          const current = snapshot.resources.find(item => item.id === row.source.id);
+          if (!current) continue;
+          row.button.setAttribute('aria-pressed', String(row.source.id === selectedId));
+          set(row.status, resourceStatus(current));
+          set(row.energy, `${round(current.energyWh, 1)} Wh`);
+          set(row.position, resourcePosition(run, current));
+          row.position.title = row.position.textContent;
+        }
+        const source = sources.find(item => item.id === selectedId);
+        const current = snapshot.resources.find(item => item.id === selectedId);
+        detail.hidden = !source || !current;
+        if (!source || !current) return;
+        if (renderedId !== selectedId) {
+          renderedId = selectedId;
+          set(heading, `${source.label} · 詳情`);
+          set(capacity.output, `${round(source.capacityKg)} kg · ${round(source.capacityL)} L`);
+          set(standby.output, `${round(source.mockProfile.idleW, 0)} Wh/h`);
+          set(reserve.output, `${round(source.reserveWh)} Wh`);
+          schedule.replaceChildren();
+          eventRows = run.events.filter(event => event.resourceIds.includes(source.id)).map(event => {
+            const item = text('li');
+            const button = text('button', 'daily-resource-event', `${minuteLabel(event.timeMin)}　${event.label}`);
+            button.type = 'button';
+            button.addEventListener('click', () => actions.seekMinute(event.timeMin, event.id));
+            item.append(button);
+            schedule.append(item);
+            return {event, item};
+          });
+        }
+        set(activity, resourceActivity(current));
+        activity.hidden = !resourceActivity(current);
+        set(cargo.output, current.orderIds.length ? current.orderIds.map(id => run.fixture.orders.find(order => order.id === id)?.label ?? id).join('、') : '無');
+        for (const {event, item} of eventRows) item.classList.toggle('is-past', event.timeMin <= snapshot.timeMin);
+        end.hidden = snapshot.timeMin < run.endMin - 1e-7;
+        const outcome = run.summary.resources.find(item => item.id === selectedId);
+        set(end, `日終：${siteName(run.fixture, outcome.siteId)} · ${resourceStatus(outcome)} · ${round(outcome.energyWh)} Wh（保留 ${round(outcome.reserveWh)} Wh）`);
       });
       return {root, stop};
     },
     update() {},
-    describeForAI() { return {schemaVersion: 1, kind: 'resource', visibleFields: [], summary: '固定模擬情境；AI 解說未啟用。'}; },
+    describeForAI() { return {schemaVersion: 1, kind: 'resource-status', visibleFields: [], summary: '模擬運具狀態；AI 解說未啟用。'}; },
     dispose(view) { view.stop(); },
   };
 }
 
 export function createDailyPanels(options) {
-  return {dailyPlan: createPlanPanel(options), orderDetail: createOrderPanel(options), resource: createResourcePanel(options)};
+  return {dailyPlan: createPlanPanel(options), orderDetail: createOrderPanel(options), resourceStatus: createResourceStatusPanel(options)};
 }

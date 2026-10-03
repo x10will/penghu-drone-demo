@@ -4,6 +4,10 @@ import {makeItinerary, poseAt, returnRequest, riskAt, safetyCost, TURNAROUND_MIN
 const META_URL = new URL('../data/danger_frames/danger_meta.json', import.meta.url);
 const FIELD_URL = new URL('../data/danger_frames/router_field.bin', import.meta.url);
 const EPS_MIN = 1e-6;
+// The same Magong–Qimei direction as D-01, with a verified same-day return.
+export const DEFAULT_TRIAL_REQUEST = Object.freeze({
+  fromId: 'N04', toId: 'N05', earliest: '09:00', latest: '10:00', roundtrip: true,
+});
 const PHASE = {
   'origin-hold': '地面待命（等待風險回落）', 'pad-wait': '地面停等',
   'turnaround-hold': '地面待命（折返整備）', airborne: '模擬飛行 · 100 m ASL', arrived: '已抵達',
@@ -106,11 +110,11 @@ export function createTrialPlanner({run, store, actions}) {
       from.disabled = to.disabled = true;
       const earliest = el('input'), latest = el('input');
       for (const input of [earliest, latest]) { input.type = 'time'; input.required = true; input.step = 60; }
-      earliest.value = '10:00'; latest.value = '15:00';
+      earliest.value = DEFAULT_TRIAL_REQUEST.earliest; latest.value = DEFAULT_TRIAL_REQUEST.latest;
       earliest.setAttribute('aria-label', '最早起飛時間');
       latest.setAttribute('aria-label', '最晚起飛時間');
       const roundtrip = el('input');
-      roundtrip.type = 'checkbox'; roundtrip.checked = true;
+      roundtrip.type = 'checkbox'; roundtrip.checked = DEFAULT_TRIAL_REQUEST.roundtrip;
       roundtrip.setAttribute('aria-label', '試算同日往返');
       const labelled = (title, control) => { const wrapper = el('label', 'trial-field'); wrapper.append(el('span', '', title), control); return wrapper; };
       const roundtripLabel = el('label', 'trial-check');
@@ -150,8 +154,8 @@ export function createTrialPlanner({run, store, actions}) {
       let displayedPlan = undefined, displayedMessage = undefined, displayedOutbound = undefined;
       const abort = new AbortController();
       const selectPads = pads => {
-        const previousFrom = initial?.request?.fromId ?? from.value ?? 'N04';
-        const previousTo = initial?.request?.toId ?? to.value ?? 'N05';
+        const previousFrom = initial?.request?.fromId ?? from.value;
+        const previousTo = initial?.request?.toId ?? to.value;
         for (const select of [from, to]) select.replaceChildren();
         for (const pad of pads) {
           for (const select of [from, to]) {
@@ -160,19 +164,32 @@ export function createTrialPlanner({run, store, actions}) {
             select.append(option);
           }
         }
-        from.value = pads.some(p => p.id === previousFrom) ? previousFrom : 'N04';
-        to.value = pads.some(p => p.id === previousTo) ? previousTo : 'N05';
+        from.value = pads.some(p => p.id === previousFrom) ? previousFrom : DEFAULT_TRIAL_REQUEST.fromId;
+        to.value = pads.some(p => p.id === previousTo) ? previousTo : DEFAULT_TRIAL_REQUEST.toId;
       };
       if (initial?.pads) selectPads(initial.pads);
 
+      const planningBlock = state => {
+        if (loadError) return loadError;
+        if (state.mapStatus?.error) return `地圖尚未就緒：${state.mapStatus.error}`;
+        if (!state.mapStatus?.ready) return '地圖載入中；就緒後可規劃。';
+        if (state.hazardVisible !== false) {
+          if (state.fieldStatus?.error) return `風險場尚未就緒：${state.fieldStatus.error}`;
+          if (state.fieldStatus?.loading !== false || !Number.isFinite(state.fieldStatus?.timeMin)) {
+            return '風險場載入中；就緒後可規劃。';
+          }
+        }
+        return ready ? '' : '航線資料載入中；就緒後可規劃。';
+      };
       const refresh = state => {
         const accepted = state.trialPlan;
         const message = accepted ? '' : localMessage;
-        submit.disabled = !ready || busy;
+        const blocked = planningBlock(state);
+        submit.disabled = !!blocked || busy;
         start.disabled = !accepted;
         fly.disabled = replay.disabled = !accepted;
         clear.disabled = !accepted && (!localMessage || !!loadError);
-        status.textContent = busy ? '正在計算安全航線…' : loadError || (!ready ? '載入模擬風險場…'
+        status.textContent = blocked || (busy ? '正在計算安全航線…'
           : accepted?.returnReason_zh ? '僅出程可行；回程未成立，可模擬出程。'
           : accepted ? '航線試算完成；可用今日時鐘查看飛行。'
           : message || '選擇起降點與時間後規劃航線。');
@@ -222,7 +239,7 @@ export function createTrialPlanner({run, store, actions}) {
       }
       form.addEventListener('submit', event => {
         event.preventDefault();
-        if (!ready || busy || !form.reportValidity()) return;
+        if (planningBlock(store.get()) || busy || !form.reportValidity()) return;
         invalidate('');
         busy = true;
         const request = {fromId: from.value, toId: to.value,
@@ -233,6 +250,7 @@ export function createTrialPlanner({run, store, actions}) {
         timer = setTimeout(() => {
           timer = null;
           if (disposed || current !== sequence) return;
+          if (planningBlock(store.get())) { busy = false; refresh(store.get()); return; }
           try {
             const outcome = calculateTrial({field, meta, request, startMin: run.startMin, endMin: run.endMin});
             if (disposed || current !== sequence) return;

@@ -14,7 +14,12 @@ export default function setup(api) {
   root.name = 'penghu-daily';
   api.scene.add(root);
   const viewStyle = document.createElement('style');
-  viewStyle.textContent = 'html.dt-embed #dt-embed-navigation{top:56px;right:6px;max-width:100px}.penghu-daily-credit .credit-full{box-sizing:border-box}.daily-map-tools{position:fixed;top:8px;left:8px;z-index:100;max-width:calc(100% - 150px);padding:6px;border:1px solid #50737c;border-radius:8px;background:#102735ed;color:#e5f3f7;font:11px/1.4 system-ui}.daily-map-tools details>div{display:grid;gap:5px;margin-top:6px}.daily-map-tools summary{cursor:pointer;min-height:26px}.daily-map-tools button,.daily-map-tools select{background:#193e4b;color:#e5f3f7;border:1px solid #50737c;border-radius:4px;min-height:32px;font:inherit}.daily-map-tools button[aria-pressed=true]{background:#24645c}.daily-map-tools .camera-modes{display:flex;gap:4px}.daily-map-tools output{display:block;max-width:230px;font-size:10px}.daily-map-tools label{display:flex;gap:4px;align-items:center}.daily-map-tools select{max-width:100%}@media(max-width:767px){.daily-map-tools{max-width:calc(100% - 130px)}}';
+  viewStyle.textContent = `
+    html.dt-embed #dt-embed-navigation{top:56px;right:6px;width:190px;max-width:calc(100% - 12px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+    html.dt-embed #dt-embed-navigation button{box-sizing:border-box;width:100%;max-width:100%;min-width:0;margin:0}
+    html.dt-embed #dt-embed-navigation #viewpoints{grid-column:1/-1;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));flex-direction:row;max-height:none;overflow:visible;gap:4px;width:100%;min-width:0}
+    .penghu-daily-credit .credit-full{box-sizing:border-box}
+  `;
   document.head.append(viewStyle);
   const creditStyle = document.createElement('link'); creditStyle.rel = 'stylesheet';
   creditStyle.href = new URL('./attribution.css', import.meta.url).href;
@@ -55,7 +60,7 @@ export default function setup(api) {
   });
   const emit = (name, payload) => { if (!disposed) api.appEvent(name, payload); };
   const tools = document.createElement('section'); tools.className = 'daily-map-tools';
-  tools.setAttribute('aria-label', '地圖工具'); tools.style.setProperty('display', 'block', 'important');
+  tools.setAttribute('aria-label', '地圖工具'); tools.style.setProperty('display', 'none', 'important');
   // This toolbar is inside the map iframe: it shares the map's entire lifecycle.
   tools.innerHTML = '<details><summary>地圖工具 · 模擬資料</summary><div><button type="button" data-overview>全區視角</button><select aria-label="地圖追蹤對象"></select><div class="camera-modes"><button type="button" data-mode="free">自由</button><button type="button" data-mode="follow">跟隨</button><button type="button" data-mode="tail">尾隨</button></div><label><input type="checkbox" checked>風險場</label><output role="status">風險場載入中</output></div></details>';
   document.body.append(tools);
@@ -148,7 +153,9 @@ export default function setup(api) {
     });
     const group = visual.group; group.name = `daily-resource-${resource.id}`;
     const color = COLORS[resource.id] || '#fff';
-    const caption = label(`${resource.id} · ${resource.type === 'drone' ? '無人機' : '冷藏車'}`, color, 'resource');
+    const captionText = `${resource.id} · ${resource.typeLabel ?? (resource.type === 'drone' ? '無人機' : resource.id === 'V-01' ? '配送車' : '接駁車')}`;
+    const caption = label(captionText, color, 'resource');
+    caption.userData.label = captionText;
     caption.center.set(.5, resource.type === 'drone' ? -.4 : 1.6);
     group.add(caption); group.renderOrder = 30;
     group.traverse(object => { object.renderOrder = 30; });

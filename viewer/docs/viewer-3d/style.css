@@ -43,6 +43,23 @@ canvas { display: block; }
   height: 100%; width: 0; background: #34d399;
   border-radius: 2px; transition: width 0.2s;
 }
+#loading-error[hidden] { display: none; }
+#loading-error {
+  max-width: min(560px, calc(100vw - 48px));
+  text-align: center;
+}
+#loading-error-heading {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+#loading-error-message {
+  color: #d4d4d8;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 
 /* HUD */
 #hud {
@@ -247,6 +264,9 @@ select.ctrl-select {
 #inspector-body .kv { display: flex; gap: 8px; }
 #inspector-body .kv-key { color: #5a6170; flex: 0 0 38%; }
 #inspector-body .kv-val { color: #c8ccd4; flex: 1; word-break: break-all; }
+#inspector-body .source-row a { color: #5b9bd5; }
+#inspector-body .inspector-section { margin-top: 8px; padding-top: 7px; border-top: 1px solid #2a2a40; }
+#inspector-body .inspector-section-title { color: #e0e4ec; margin-bottom: 4px; }
 .diagnosis-chain { margin-top: 8px; padding-top: 7px; border-top: 1px solid #2a2a40; }
 .diagnosis-chain-step { display: flex; gap: 7px; margin: 5px 0; }
 .diagnosis-chain-index {

@@ -305,12 +305,15 @@ export function renderBody(element, geometryReport) {
   return parts.filter(Boolean).join('');
 }
 
+function typedBadge(element) {
+  return element.semantic_type || element.twin_type || element.origin_kind || 'typed';
+}
+
 export function showInspector(element, geometryReport) {
   const panel = el('inspector');
   if (!panel || !element) return;
   currentTypedInspection = { element, geometryReport };
-  el('inspector-type').textContent = element.semantic_type || element.twin_type
-    || element.origin_kind || 'typed';
+  el('inspector-type').textContent = typedBadge(element);
   el('inspector-id').textContent = element.id;
   el('inspector-id').classList.remove('copied');
   el('inspector-body').innerHTML = renderBody(element, geometryReport);
@@ -420,21 +423,24 @@ export function setTwinToSimNodeIndex(map) {
 // (name, description, hours, wikidata) for a building-surface click. The
 // TECHNICAL node card (z / lineage) stays on balls and balloons; this card
 // deliberately carries no Z rows. Element built by poi-card.js.
-export function showPoiDescriptionInspector(element) {
-  const panel = el('inspector');
-  if (!panel || !element) return;
-  el('inspector-type').textContent = element.name || 'POI';
-  el('inspector-id').textContent = element.id || '';
-  el('inspector-id').classList.remove('copied');
-  const parts = [
+export function renderPoiDescriptionBody(element) {
+  return [
     kvRow('name_en', element.name_en),
     kvRow('type', element.poi_type),
     kvRow('about', element.description),
     kvRow('hours', element.opening_hours),
     kvRow('wikidata', element.wikidata),
     kvRow('sim_node', twinToSimNode.get(String(element.id || '')) || null),
-  ];
-  el('inspector-body').innerHTML = parts.filter(Boolean).join('');
+  ].filter(Boolean).join('');
+}
+
+export function showPoiDescriptionInspector(element) {
+  const panel = el('inspector');
+  if (!panel || !element) return;
+  el('inspector-type').textContent = element.name || 'POI';
+  el('inspector-id').textContent = element.id || '';
+  el('inspector-id').classList.remove('copied');
+  el('inspector-body').innerHTML = renderPoiDescriptionBody(element);
   panel.classList.remove('hidden');
   currentElementId = `poi-desc:${element.id || ''}`;
 }
@@ -443,6 +449,78 @@ export function togglePoiDescriptionInspector(element) {
   const id = `poi-desc:${element?.id || ''}`;
   if (currentElementId === id && !el('inspector').classList.contains('hidden')) hideInspector();
   else showPoiDescriptionInspector(element);
+}
+
+export function isHttpSourceUrl(url) {
+  if (typeof url !== 'string') return false;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// twin-inspection-contract: source rows come only from the validated runtime
+// lineage index. Missing optional fields are omitted, never filled with guesses.
+export function renderSourcesBody(record) {
+  if (!record?.entry || typeof record.entry !== 'object') return '';
+  const entry = record.entry;
+  const rows = [kvRow('authority', entry.authority)];
+  for (const source of Array.isArray(entry.sources) ? entry.sources : []) {
+    if (!source || typeof source !== 'object') continue;
+    const name = source.name == null ? '' : String(source.name);
+    const safeName = isHttpSourceUrl(source.url)
+      ? `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(name)}</a>`
+      : escapeHtml(name);
+    const detailRows = [
+      kvRow('provider', source.provider),
+      kvRow('trust_level', source.trust_level),
+      kvRow('provides', source.provides),
+      kvRow('resolved_fields', Array.isArray(source.resolved_fields) && source.resolved_fields.length
+        ? source.resolved_fields.join(', ') : null),
+    ].filter(Boolean).join('');
+    rows.push(`<div class="source-row" data-source-id="${escapeHtml(source.source_id ?? '')}">`
+      + `<div class="kv"><span class="kv-key">name</span><span class="kv-val">${safeName}</span></div>`
+      + detailRows + '</div>');
+  }
+  return rows.filter(Boolean).join('');
+}
+
+// twin-inspection-contract: one twin's inspection composed from its available
+// views ({view, record}, in the site's configured order). The first view
+// supplies the header and body exactly as its standalone card shows them; each
+// further view appends a section titled with the view name.
+function twinViewCard({ view, record }) {
+  if (view === 'descriptive') {
+    return { badge: record.name || 'POI', id: record.id || '', body: renderPoiDescriptionBody(record) };
+  }
+  if (view === 'sources') {
+    return { badge: 'twin', id: record.twinId, body: renderSourcesBody(record) };
+  }
+  return { badge: typedBadge(record.element), id: record.element.id,
+    body: renderBody(record.element, record.geometryReport) };
+}
+
+export function showTwinInspection(key, views) {
+  const panel = el('inspector');
+  if (!panel || !views?.length) return;
+  const [first, ...rest] = views.map((view) => ({ view: view.view, ...twinViewCard(view) }));
+  el('inspector-type').textContent = first.badge;
+  el('inspector-id').textContent = first.id;
+  el('inspector-id').classList.remove('copied');
+  el('inspector-body').innerHTML = first.body + rest.map((section) =>
+    `<div class="inspector-section" data-view="${escapeHtml(section.view)}">`
+    + `<div class="inspector-section-title">${escapeHtml(section.view)}</div>`
+    + `<div class="inspector-section-body">${section.body}</div></div>`).join('');
+  panel.classList.remove('hidden');
+  currentElementId = `twin:${key}`;
+  currentTypedInspection = null;
+}
+
+export function toggleTwinInspection(key, views) {
+  if (currentElementId === `twin:${key}` && !el('inspector').classList.contains('hidden')) hideInspector();
+  else showTwinInspection(key, views);
 }
 
 // sml-viewer-diagnostic-convergence: T2 sim-node inspector. These nodes are NOT

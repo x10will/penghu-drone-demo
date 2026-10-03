@@ -119,6 +119,9 @@ export function createExtensions({ THREE, dt, site, localToGeo, emit, translateC
       }
       return undefined;
     },
+    // The objects extensions registered, for the viewer's click priority. A copy:
+    // the registry changes only through registerPickable and its unregister.
+    pickTargets: () => [...picks.keys()],
     command(name, payload) {
       for (const entry of entries) for (const fn of entry.commands) invoke(entry, fn, name, payload);
     },

@@ -1,7 +1,8 @@
-import { canonicalCandidateUrl, loadCanonicalAdapter, createCanonicalClock, localArtifactUrl, presentationPaint } from '../viewer-common/canonical-site-playback.mjs';
+import { canonicalCandidate, loadCanonicalAdapter, createCanonicalClock, localArtifactUrl, presentationPaint } from '../viewer-common/canonical-site-playback.mjs';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createSiteGLTFLoader } from '../viewer-common/site-gltf-loader.mjs';
+import { fetchSiteAsset as fetch } from '../viewer-common/fetch-site-asset.mjs';
 import { TypedRuntimeRegistry } from '../viewer-common/typed-runtime.js';
 import { resolveTwinQuery, resolveTwinQueryAll, buildNameById } from '../viewer-common/goto-resolver.js';
 import { mergeEdgesIntoBatches } from '../viewer-common/edge-mesh-merge.js';
@@ -19,6 +20,10 @@ import {
 import { installMobileGestureController } from './mobile-gesture-controller.js';
 import { installMobileChrome } from './mobile-chrome.js';
 import { buildNodeElement, buildTwinToSimNodeIndex } from '../viewer-common/node-card.js';
+import {
+  DEFAULT_LABEL_VIEWS, resolveLabelTwin, composeTwinViews, summarizeLabelBindings,
+} from '../viewer-common/label-binding.js';
+import { loadTwinLineageIndex, resolveTwinLineageEntry } from '../viewer-common/twin-lineage.js';
 import { buildPoiDescriptionIndex, resolvePoiAtXY, buildPoiDescriptionElement } from '../viewer-common/poi-card.js';
 import {
   causalMarkerScale,
@@ -31,6 +36,7 @@ import {
   chooseAxisAwareCausalHit,
 } from '../viewer-common/causal-diagnosis.js';
 import { chainRuns, layoutLabels } from './edge-labels.mjs';
+import { stackLabelLifts } from '../viewer-common/poi-label-declutter.mjs';
 import {
   computeCliffNodes,
   submergedInBasinPoint,
@@ -60,6 +66,8 @@ import { buildSchematicLayer } from './schematic-layer.js';
 import { buildBikeGeometry } from './actor-models.js';
 import {
   resolveDeclaredLayerRequests,
+  validateContextManifest,
+  contextLayerToggleDefinitions,
   resolveContextManifestUrl,
   resolveProvenanceCatalogUrl,
   applyProvenanceCatalog,
@@ -95,6 +103,8 @@ import {
   isSupportStructureUserData,
   toggleSupportStructureInspector,
   attachInspectorBindings,
+  toggleTwinInspection,
+  showTwinInspection,
 } from './inspector-panel.js';
 
 let typedRuntime = new TypedRuntimeRegistry();
@@ -447,6 +457,7 @@ scene.add(environmentGroup);
 let environmentProgress = 0;
 let environmentMode = ENV.name || 'daylight';
 let latestEnvironmentSample = null;
+const CANONICAL_ENVIRONMENT_PRESETS = new Set(['night', 'dawn', 'day', 'dusk']);
 
 function resolveSolarModel(env) {
   if (env.name !== 'sunrise-demo') return null;
@@ -625,7 +636,7 @@ function applyInitialSunriseCameraPose() {
 applyInitialSunriseCameraPose();
 
 function updateSunAndLight(sample) {
-  if (environmentMode !== 'sunrise-demo') return;
+  if (environmentMode !== 'sunrise-demo' && !environmentMode.startsWith('canonical:')) return;
   const dir = sunDirection(sample.dir.azimuthDeg, sample.dir.elevationDeg);
   const target = controls.target || new THREE.Vector3(0, 0, window.DT_SITE.cameraTargetZ);
   setSkySun(sample, dir);
@@ -651,6 +662,98 @@ function applyDaylightEnvironment() {
   latestEnvironmentSample = null;
   hideSkySun();
   environmentGroup.visible = false;
+}
+
+function canonicalEnvironmentPreset(environment) {
+  const time = environment?.time_of_day;
+  const sun = environment?.sun;
+  if (typeof time !== 'string' || !/^\d{2}:\d{2}$/.test(time)
+      || Number(time.slice(0, 2)) > 23 || Number(time.slice(3, 5)) > 59
+      || !Number.isFinite(sun?.elevation_deg) || !Number.isFinite(sun?.azimuth_deg)) {
+    throw new Error('Canonical frame environment requires HH:MM time_of_day and finite sun elevation_deg/azimuth_deg');
+  }
+  if (environment.preset_hint != null && !CANONICAL_ENVIRONMENT_PRESETS.has(environment.preset_hint)) {
+    throw new Error(`Canonical frame environment has unknown preset_hint: ${environment.preset_hint}`);
+  }
+  if (environment.preset_hint) return environment.preset_hint;
+  if (sun.elevation_deg <= -6) return 'night';
+  if (sun.elevation_deg >= 8) return 'day';
+  const minutes = parseTimeMinutes(time);
+  if (minutes >= 5 * 60 && minutes < 12 * 60) return 'dawn';
+  if (minutes >= 16 * 60 && minutes < 20 * 60) return 'dusk';
+  return 'night';
+}
+
+function canonicalEnvironmentSample(environment, preset = canonicalEnvironmentPreset(environment)) {
+  const elevation = environment.sun.elevation_deg;
+  let sample;
+  if (preset === 'night') {
+    sample = {
+      clearColor: 0x152338,
+      sky: { zenith: 0x080f1c, horizon: 0x26374d, ground: 0x111923 },
+      ambient: { color: 0x9bb7eb, intensity: Math.max(0.82, STYLE.lights.ambient.intensity) },
+      dir: { color: 0xa9c2f0, intensity: STYLE.lights.dir.intensity * 0.05, opacity: 0 },
+      fill: { color: 0x637aa8, intensity: Math.max(0.38, STYLE.lights.fill.intensity) },
+      hemi: { sky: 0x879fc9, ground: 0x45505f, intensity: Math.max(0.82, STYLE.lights.hemi.intensity) },
+      fogColor: 0x26374d,
+    };
+  } else if (preset === 'day') {
+    sample = { ...sampleSunrise(1), fogColor: STYLE.fog.color };
+  } else if (preset === 'dawn') {
+    sample = { ...sampleSunrise(0.48), fogColor: 0xe3a06d };
+    sample.ambient.intensity = Math.max(0.68, sample.ambient.intensity);
+    sample.hemi.intensity = Math.max(0.78, sample.hemi.intensity);
+  } else {
+    const twilight = sampleSunrise(0.48);
+    sample = {
+      ...twilight,
+      clearColor: 0xc78a70,
+      sky: { zenith: 0x3e5c7f, horizon: 0xe3a078, ground: 0x5d4a48 },
+      ambient: { color: 0xf3c6a9, intensity: 0.72 },
+      dir: { ...twilight.dir, color: 0xffa36f },
+      fill: { color: 0xb4c7e5, intensity: Math.max(0.32, STYLE.lights.fill.intensity) },
+      hemi: { sky: 0xe8ad7d, ground: 0x655346, intensity: 0.82 },
+      fogColor: 0xd99b7a,
+    };
+  }
+  const directScale = Math.max(0, Math.min(1,
+    Math.sin(Math.max(0, elevation) * Math.PI / 180) / Math.sin(15 * Math.PI / 180)));
+  sample.dir = {
+    ...sample.dir,
+    azimuthDeg: environment.sun.azimuth_deg,
+    elevationDeg: elevation,
+    intensity: STYLE.lights.dir.intensity * directScale,
+  };
+  return { ...sample, preset };
+}
+
+function applyCanonicalEnvironment(environment) {
+  if (!environment) {
+    if (environmentMode.startsWith('canonical:')) {
+      if (ENV.name === 'sunrise-demo') applyEnvironmentProgress(environmentProgress);
+      else applyDaylightEnvironment();
+      if (scene.fog) scene.fog.color.set(STYLE.fog.color);
+    }
+    return;
+  }
+  const preset = canonicalEnvironmentPreset(environment);
+  const sample = canonicalEnvironmentSample(environment, preset);
+  environmentMode = `canonical:${preset}`;
+  environmentGroup.visible = false;
+  latestEnvironmentSample = sample;
+  renderer.setClearColor(sample.clearColor);
+  setSkyPalette(sample.sky);
+  setLightColor(ambientLight, sample.ambient.color);
+  ambientLight.intensity = sample.ambient.intensity;
+  setLightColor(dirLight, sample.dir.color);
+  dirLight.intensity = sample.dir.intensity;
+  setLightColor(fillLight, sample.fill.color);
+  fillLight.intensity = sample.fill.intensity;
+  hemiLight.color.set(sample.hemi.sky);
+  hemiLight.groundColor.set(sample.hemi.ground);
+  hemiLight.intensity = sample.hemi.intensity;
+  if (scene.fog) scene.fog.color.set(sample.fogColor);
+  updateSunAndLight(sample);
 }
 
 function applyEnvironmentProgress(progress, now) {
@@ -745,6 +848,10 @@ function environmentStateForTest() {
     sunriseTime: solarModel?.localTime,
     sunAzimuthDeg: latestEnvironmentSample?.dir?.azimuthDeg,
     sunElevationDeg: latestEnvironmentSample?.dir?.elevationDeg,
+    directionalIntensity: dirLight.intensity,
+    ambientIntensity: ambientLight.intensity,
+    fogColor: scene.fog?.color.getHex() ?? null,
+    clearColor: renderer.getClearColor(new THREE.Color()).getHex(),
     cloudCount: 0,
     pickExcluded: !roots.includes(skyMesh) && !roots.includes(environmentGroup),
   };
@@ -786,11 +893,7 @@ let loadedTerrainMesh = null;  // cached for screen-center raycast (R2)
 
 async function loadTerrain() {
   setLoading('Loading terrain mesh...', 1);
-  const loader = new GLTFLoader();
-  if (window.DT_SITE.meshopt) {
-    const { MeshoptDecoder } = await import('three/addons/libs/meshopt_decoder.module.js');
-    loader.setMeshoptDecoder(MeshoptDecoder);
-  }
+  const loader = await createSiteGLTFLoader(window.DT_SITE);
 
   return new Promise((resolve, reject) => {
     loader.load(window.DT_assetUrl('meshes/terrain.glb'),
@@ -910,6 +1013,14 @@ let edgeBatch = null; // set by loadMeshes when MERGE_EDGES → the merge handle
 // the same toggles (terrain/lake/nodes/surfaces); production lacked them, so the
 // coarse terrain mesh buried edges with no way to look underneath.
 const layerRoots = {};
+// A progressive site binds a deferred layer's toggle to a placeholder group
+// before the layer loads; the loaded root takes over the placeholder's
+// visibility so a toggle flipped during loading is not lost.
+function adoptLayerRoot(key, root) {
+  const pending = layerRoots[key];
+  if (pending?.userData?.dtPendingLayer) root.visible = pending.visible;
+  layerRoots[key] = root;
+}
 const assetDiagnostics = [];
 
 const ASSET_LAYER_FAILURE_UI = {
@@ -986,11 +1097,7 @@ let _schematicLineMaterials = [];
 let _diagModeSnapshot = null;
 
 async function loadMeshes() {
-  const loader = new GLTFLoader();
-  if (window.DT_SITE.meshopt) {
-    const { MeshoptDecoder } = await import('three/addons/libs/meshopt_decoder.module.js');
-    loader.setMeshoptDecoder(MeshoptDecoder);
-  }
+  const loader = await createSiteGLTFLoader(window.DT_SITE);
   setLoading('Loading scene meshes...', 4);
 
   const lakeMat = new THREE.MeshStandardMaterial({
@@ -1115,7 +1222,7 @@ async function loadMeshes() {
             // NOT added to the scene → zero draw calls, never raycast.
             edgeBatch = mergeEdgesIntoBatches(THREE, gltf.scene);
             scene.add(edgeBatch.group);
-            if (opts.layer) layerRoots[opts.layer] = edgeBatch.group;  // toggleable
+            if (opts.layer) adoptLayerRoot(opts.layer, edgeBatch.group);  // toggleable
             // I1: the per-edge materials are unused under merge (the batch owns
             // color); dispose them to reclaim memory. Geometry is retained (the
             // originals stay in twinRegistry) for goto-extent framing.
@@ -1124,7 +1231,7 @@ async function loadMeshes() {
               + `${edgeBatch.drawCallCount} draw call(s)`);
           } else {
             scene.add(gltf.scene);
-            if (opts.layer) layerRoots[opts.layer] = gltf.scene;  // toggleable layer
+            if (opts.layer) adoptLayerRoot(opts.layer, gltf.scene);  // toggleable layer
           }
           if (opts.contextRequest) {
             const inspection = contextInspectionRecord(opts.contextRequest);
@@ -1164,26 +1271,46 @@ async function loadMeshes() {
     });
   }
 
-  if (window.DT_SITE.progressiveLoading) {
+  // Progressive startup: terrain and nodes render first; every other scene
+  // detail (edges, buildings, context layers, props, ...) is started after the
+  // first frame. `deferred` holds those loads as thunks. A site without the
+  // option starts each load exactly where it always did.
+  const progressive = !!window.DT_SITE.progressiveLoading;
+  const deferred = [];
+  // Bind toggles now; loadGLB carries the placeholder's visibility over when
+  // the real root replaces it.
+  const pendingLayer = (key) => {
+    if (progressive && key && !layerRoots[key]) {
+      layerRoots[key] = new THREE.Group();
+      layerRoots[key].userData.dtPendingLayer = true;
+    }
+  };
+  if (progressive) {
     const nodes = await loadGLB(window.DT_assetUrl('meshes/nodes.glb'), {
       registerTwins: true, extractNodeZ: true, layer: 'nodes',
     });
     if (!nodes) throw new Error('Required startup nodes failed to load');
-    if (window.DT_SITE.id === 'penghu' && nodes.twins !== 15) {
-      throw new Error(`Penghu startup requires 15 nodes; loaded ${nodes.twins}`);
+    // Optional site contract: a site may pin its startup node count so a
+    // truncated or stale nodes.glb fails loudly instead of rendering partially.
+    const expectedNodes = window.DT_SITE.startupNodeCount;
+    if (Number.isInteger(expectedNodes) && nodes.twins !== expectedNodes) {
+      throw new Error(`Site startup requires ${expectedNodes} nodes; loaded ${nodes.twins}`);
     }
-    const details = [
-      ['edges', { registerTwins: true, trackMaterials: true, layer: 'edges', mergeEdges: true }],
-      ['buildings', { material: buildingMat, clamp: true, layer: 'buildings', userData: { dt_layer: 'buildings' } }],
-    ].filter(([key]) => window.DT_hasLayer(key));
-    // Bind toggles now; their handlers look up the current root on each change.
-    for (const [key] of details) layerRoots[key] = new THREE.Group();
-    return async () => Promise.all(details.map(async ([key, opts]) => {
-      const pendingRoot = layerRoots[key];
-      const result = await loadGLB(window.DT_assetUrl(`meshes/${key}.glb`), opts);
-      if (!result) throw new Error(`Deferred ${key} failed to load`);
-      layerRoots[key].visible = pendingRoot.visible;
-    }));
+    const edgeOpts = { registerTwins: true, trackMaterials: true, layer: 'edges', mergeEdges: true };
+    const loadEdges = async () => {
+      const result = await loadGLB(window.DT_assetUrl('meshes/edges.glb'), edgeOpts);
+      if (!result) throw new Error('Deferred edges failed to load');
+      return result;
+    };
+    if (window.DT_hasLayer('intersections')) {
+      // The diagnostics pipeline indexes the rendered edge meshes once, right
+      // after this function returns, so a site that declares it keeps edges
+      // in startup.
+      await loadEdges();
+    } else if (window.DT_hasLayer('edges')) {
+      pendingLayer('edges');
+      deferred.push(loadEdges);
+    }
   }
 
   async function fetchRequiredSupportJson(path) {
@@ -1246,26 +1373,46 @@ async function loadMeshes() {
   // function; load lake, then supports, before any deck/edge member.  This is
   // not a display-Z or visibility override.
   const preDeck = [];
-  if (window.DT_hasLayer('lake')) preDeck.push(await loadGLB(
-    window.DT_assetUrl('meshes/lake.glb'), { material: lakeMat, layer: 'lake' },
-  ));
-  if (window.DT_hasLayer('supportStructures')) {
-    preDeck.push(await loadSupportStructures());
+  const loadPreDeck = async () => {
+    if (window.DT_hasLayer('lake')) preDeck.push(await loadGLB(
+      window.DT_assetUrl('meshes/lake.glb'), { material: lakeMat, layer: 'lake' },
+    ));
+    if (window.DT_hasLayer('supportStructures')) {
+      preDeck.push(await loadSupportStructures());
+    }
+  };
+  if (progressive) {
+    // Kept as one sequential thunk so lake and supports still land first.
+    if (window.DT_hasLayer('lake')) pendingLayer('lake');
+    if (window.DT_hasLayer('supportStructures')) pendingLayer('supportStructures');
+  } else {
+    await loadPreDeck();
   }
 
   // Remaining optional layers — only loaded if the active site declares them
   // (a site without docks/etc. skips it; viewer-3d-site-agnostic D3).
   const optional = [];
+  // Starts a load now, or after the first frame on a progressive site.
+  const addOptional = (start, layer) => {
+    if (!progressive) { optional.push(start()); return; }
+    pendingLayer(layer);
+    deferred.push(start);
+  };
   // dt_layer stamp: buildings.glb is ONE merged mesh (no per-twin identity) —
   // the click router resolves a buildings hit by PROXIMITY to the descriptive
   // POI registry, keyed on this stamp (sml-poi-descriptive-cards).
-  if (window.DT_hasLayer('buildings')) optional.push(loadGLB(window.DT_assetUrl('meshes/buildings.glb'), { material: buildingMat, clamp: true, layer: 'buildings', userData: { dt_layer: 'buildings' } }));
-  if (window.DT_hasLayer('docks'))     optional.push(loadGLB(window.DT_assetUrl('meshes/docks.glb'), { clamp: true, layer: 'docks' }));
-  if (window.DT_hasLayer('junctionPlates')) optional.push(loadGLB(
+  if (window.DT_hasLayer('buildings')) addOptional(async () => {
+    const result = await loadGLB(window.DT_assetUrl('meshes/buildings.glb'), { material: buildingMat, clamp: true, layer: 'buildings', userData: { dt_layer: 'buildings' } });
+    // Progressive startup has always treated deferred buildings as required.
+    if (!result && progressive) throw new Error('Deferred buildings failed to load');
+    return result;
+  }, 'buildings');
+  if (window.DT_hasLayer('docks'))     addOptional(() => loadGLB(window.DT_assetUrl('meshes/docks.glb'), { clamp: true, layer: 'docks' }), 'docks');
+  if (window.DT_hasLayer('junctionPlates')) addOptional(() => loadGLB(
     window.DT_assetUrl('meshes/junction_plates.glb'), { layer: 'junctionPlates' },
-  ));
+  ), 'junctionPlates');
   // Conifer dressing — terrain-raycast tree impostors, one merged mesh (vertex colours -> matte Lambert).
-  if (window.DT_hasLayer('trees')) optional.push(loadGLB(window.DT_assetUrl('meshes/trees.glb'), { layer: 'trees' }));
+  if (window.DT_hasLayer('trees')) addOptional(() => loadGLB(window.DT_assetUrl('meshes/trees.glb'), { layer: 'trees' }), 'trees');
 
   // Hero prop assets (video-recon-hero-prop): config-declared anchored GLBs,
   // grouped under one toggleable 'props' layer. Not terrain, not graph — a
@@ -1316,7 +1463,7 @@ async function loadMeshes() {
           ? { authoredProp: authoredPropInspection(p) }
           : {};
       propOpts.preserveDeclaredAppearance = readAppearanceDeclaration(p, `prop ${p.id}`);
-      optional.push(loadGLB(window.DT_assetUrl(p.path), propOpts).then((r) => {
+      addOptional(() => loadGLB(window.DT_assetUrl(p.path), propOpts).then((r) => {
         if (r && r.scene) {
           r.scene.visible = p.visible !== false;
           // identity stamp (PR #51 review finding 1): without it a prop click
@@ -1341,6 +1488,9 @@ async function loadMeshes() {
             // contextRegistry; no context prop may enter twinRegistry.
           } else if (isAuthoredProp) {
             authoredPropRegistry.set(p.id, { scene: r.scene, record: propOpts.authoredProp });
+            // A prop that lands after the first frame takes the current
+            // frame's paint at once, also while playback is paused.
+            if (canonicalProjection) applyCanonicalPresentation(canonicalProjection.presentation, [p.id]);
           } else if (!twinRegistry.has(p.id)) {
             // Legacy SML prop path: no new authority metadata means the old
             // twin registration and p.twin stamp remain exactly unchanged.
@@ -1354,6 +1504,10 @@ async function loadMeshes() {
         return r;
       }));
     }
+    // A progressive site binds the context catalog's toggle before its props land.
+    if (progressive && siteProps.some((p) => p.authority_scope === CONTEXT_AUTHORITY_SCOPE)) {
+      getContextPropsGroup();
+    }
   }
 
   // Splat display lane (sml-hero-splat-v2): photoreal Gaussian splats over
@@ -1361,7 +1515,7 @@ async function loadMeshes() {
   // raycast/pick duty (the Raycaster ignores visibility, so a hidden mesh
   // still picks). A splat that loads takes display duty from its meshProps
   // (applied in installLayerToggles, after ALL loads, so registration order
-  // can't race); a 404/renderer failure warns and the mesh stays visible.
+  // can't race; a progressive site applies it again after its deferred loads); a 404/renderer failure warns and the mesh stays visible.
   // The renderer module is imported dynamically so sites without splats pay
   // nothing. sharedMemoryForWorkers=false: our servers send no COOP/COEP.
   const siteSplats = (window.DT_SITE && window.DT_SITE.splats) || [];
@@ -1370,7 +1524,7 @@ async function loadMeshes() {
     splatsGroup.name = 'splats';
     scene.add(splatsGroup);
     layerRoots.splats = splatsGroup;
-    optional.push((async () => {
+    addOptional(async () => {
       let gs;
       try {
         gs = await import('@mkkellogg/gaussian-splats-3d');
@@ -1378,34 +1532,48 @@ async function loadMeshes() {
         console.warn('[splats] renderer module failed to load — mesh props stay visible', e);
         return null;
       }
-      // ONE DropInViewer hosting every splat scene: the library's supported
-      // multi-scene path is repeated addSplatScene on a single instance (its
-      // demos do exactly this). Two separate DropInViewers rendered only the
-      // last-added one (observed: 文武廟 fine, 拉魯島 invisible).
+      // ONE DropInViewer and ONE combined build. In 0.4.7, addSplatScene
+      // resolves before its tree worker finishes; a second call can dispose
+      // the pending tree and crash its completion at visitLeaves. The public
+      // batch API builds all available scenes together, avoiding that race.
       const dropIn = new gs.DropInViewer({ sharedMemoryForWorkers: false });
       dropIn.name = 'splats-dropin';
       Object.assign(dropIn.userData, { kind: 'splat' });
+      const availableSplats = [];
       for (const sp of siteSplats) {
         try {
           const url = window.DT_assetUrl(sp.path);
           // fail FAST on a missing asset: the library's addSplatScene never
           // settles on a 404 (observed: it hangs the whole boot batch), so
-          // probe first, and race a timeout as the belt for hung parses.
+          // probe first; a missing splat does not block the other scenes.
           const head = await fetch(url, { method: 'HEAD' });
           if (!head.ok) throw new Error(`HTTP ${head.status} for ${sp.path}`);
-          await Promise.race([
-            dropIn.addSplatScene(url, {
-              showLoadingUI: false,
-              splatAlphaRemovalThreshold: 5,
-            }),
-            new Promise((_, reject) => setTimeout(
-              () => reject(new Error(`splat load timed out: ${sp.path}`)), 20000)),
-          ]);
-          splatMeshPairs.push({
-            id: sp.id, twin: sp.twin, meshIds: sp.meshProps || [],
-          });
+          availableSplats.push({ sp, url });
         } catch (e) {
           console.warn(`[splats] ${sp.id} failed to load — mesh prop stays visible`, e);
+        }
+      }
+      if (availableSplats.length > 0) {
+        let loadTimeout;
+        try {
+          await Promise.race([
+            dropIn.addSplatScenes(availableSplats.map(({ url }) => ({
+              path: url,
+              splatAlphaRemovalThreshold: 5,
+            })), false),
+            new Promise((_, reject) => {
+              loadTimeout = setTimeout(() => reject(new Error('splat batch load timed out')), 20000);
+            }),
+          ]);
+          for (const { sp } of availableSplats) {
+            splatMeshPairs.push({
+              id: sp.id, twin: sp.twin, meshIds: sp.meshProps || [],
+            });
+          }
+        } catch (e) {
+          console.warn('[splats] batch failed to load — mesh props stay visible', e);
+        } finally {
+          clearTimeout(loadTimeout);
         }
       }
       if (splatMeshPairs.length > 0) {
@@ -1418,13 +1586,13 @@ async function loadMeshes() {
         splatsGroup.add(dropIn);
       }
       return null;
-    })());
+    });
   }
 
-  // Farm context is manifest-bound. A site with no explicit role declaration
+  // Context layers are manifest-bound. A site with no explicit role declaration
   // takes no branch here, preserving the SML/default load graph exactly.
   if (siteHasDeclaredContextRoles()) {
-    optional.push((async () => {
+    const resolveContextRequests = async () => {
       const manifestPath = window.DT_SITE.contextLayerManifest;
       if (typeof manifestPath !== 'string' || manifestPath.trim() === '') {
         throw new Error('site-layer consumer: declared context roles require contextLayerManifest');
@@ -1435,7 +1603,11 @@ async function loadMeshes() {
         throw new Error(`site-layer consumer: context manifest unavailable at ${manifestPath}`);
       }
       renderedStaticManifestBytes = await response.arrayBuffer();
-      const requests = resolveDeclaredLayerRequests(window.DT_SITE, JSON.parse(new TextDecoder().decode(renderedStaticManifestBytes)));
+      const manifest = JSON.parse(new TextDecoder().decode(renderedStaticManifestBytes));
+      const validation = validateContextManifest(window.DT_SITE, manifest);
+      for (const warning of validation.warnings) console.warn(warning.message);
+      const requests = resolveDeclaredLayerRequests(window.DT_SITE, manifest, validation);
+      registerContextLayerToggles(requests);
       // The package's provenance catalog answers appearance_provenance_ref,
       // which otherwise points at a profile row the package does not ship. A
       // package without the catalog leaves the reference unresolved rather
@@ -1448,6 +1620,9 @@ async function loadMeshes() {
       } catch (provenanceError) {
         console.warn('site-layer consumer: provenance catalog unavailable', provenanceError);
       }
+      return requests;
+    };
+    const loadContextRequests = async (requests) => {
       for (const request of requests) {
         // painted-terrain and river-zone-paint are metadata-only records for
         // the already-loaded terrain surface. They must never fetch terrain a
@@ -1472,7 +1647,31 @@ async function loadMeshes() {
           });
         }
       }
-    })());
+    };
+    if (progressive) {
+      // Canonical playback binds to the static manifest bytes before the first
+      // frame, so only the manifest is read now; the layers themselves follow.
+      const requests = await resolveContextRequests();
+      for (const request of requests) if (!request.alias_of) pendingLayer(request.root);
+      deferred.push(() => loadContextRequests(requests));
+    } else {
+      optional.push((async () => loadContextRequests(await resolveContextRequests()))());
+    }
+  }
+
+  if (progressive) {
+    const heroRailing = window.DT_optionalResource('heroRailing', 'meshes/test_hero_railing.glb');
+    if (heroRailing) deferred.push(() => loadGLB(heroRailing.url, { preservePBR: true, optionalResource: heroRailing }));
+    // Resolves to the reasons of the loads that failed. Every load settles
+    // before the caller finishes the scene, so one failure cannot skip the
+    // junction supersession, the splat handoff or the canonical repaint.
+    return async () => {
+      const settled = [...await Promise.allSettled([loadPreDeck()]),
+        ...await Promise.allSettled(deferred.map((start) => start()))];
+      configureJunctionPlateLegacySupersession();
+      if (layerRoots.splats) _applySplatMeshHandoff(layerRoots.splats.visible !== false);
+      return settled.filter((result) => result.status === 'rejected').map((result) => result.reason);
+    };
   }
 
   const concurrent = await Promise.all([
@@ -2517,8 +2716,31 @@ const LAYER_DEFS = [
   { key: 'props',     checkboxId: 'toggle-props', hideWhenAbsent: true },
   { key: 'splats',    checkboxId: 'toggle-splats', hideWhenAbsent: true },
   { key: 'edgeLabels', checkboxId: 'toggle-edge-labels', hideWhenAbsent: true },
-  { key: 'root-context-field-ridges', checkboxId: 'toggle-farm-field-ridges', hideWhenAbsent: true },
 ];
+const contextLayerDefs = [];
+function registerContextLayerToggles(requests) {
+  const container = document.getElementById('context-layer-toggles');
+  for (const definition of contextLayerToggleDefinitions(requests)) {
+    if (contextLayerDefs.some((existing) => existing.key === definition.key)) continue;
+    const layerDefinition = { ...definition, hideWhenAbsent: true };
+    contextLayerDefs.push(layerDefinition);
+
+    const label = document.createElement('label');
+    label.id = `${definition.checkboxId}-label`;
+    label.style.display = 'none';
+    label.dataset.contextLayerToggle = 'true';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = definition.checkboxId;
+    checkbox.checked = true;
+    label.append(checkbox, document.createTextNode(` ${definition.label}`));
+    container?.append(label);
+  }
+}
+function layerToggleDefinition(key) {
+  return LAYER_DEFS.find((definition) => definition.key === key)
+    || contextLayerDefs.find((definition) => definition.key === key);
+}
 const LAYER_STORAGE_KEY = '__dtThreeLayerToggles_v1';
 
 // Splat↔mesh display-duty pairs (sml-hero-splat-v2): filled by the splat
@@ -2558,7 +2780,7 @@ function setLayerVisible(key, on) {
   if (root) root.visible = !!on;
   if (key === 'junctionPlates') applyJunctionPlateLegacySupersession(!!on);
   if (key === 'splats') _applySplatMeshHandoff(!!on);
-  const cb = document.getElementById(LAYER_DEFS.find((d) => d.key === key)?.checkboxId);
+  const cb = document.getElementById(layerToggleDefinition(key)?.checkboxId);
   if (cb) cb.checked = !!on;          // programmatic .checked set does NOT fire 'change'
   const state = _readLayerState();
   state[key] = !!on;
@@ -2569,7 +2791,7 @@ function setLayerVisible(key, on) {
 // after the GLBs load so layerRoots is populated.
 function installLayerToggles() {
   const stored = _readLayerState();
-  for (const d of LAYER_DEFS) {
+  for (const d of [...LAYER_DEFS, ...contextLayerDefs]) {
     const root = layerRoots[d.key];
     if (!root) continue;
     const on = stored[d.key] === undefined ? true : !!stored[d.key];
@@ -2652,8 +2874,16 @@ let renderedStaticManifestBytes = null;
 let canonicalAdapter = null;
 let canonicalClock = null;
 let canonicalProjection = null;
+let canonicalRenderFailed = false;
 let canonicalResourceBaseUrl = null;
-const canonicalManifestUrl = canonicalCandidateUrl(window.DT_SITE, location.search, location.href);
+const LEGACY_CANONICAL_NOTICE_SUMMARY = '模擬候選資料 · 非農場操作建議';
+const LEGACY_CANONICAL_NOTICES = ['展示六塊田的模擬階段、擴散與通知。'];
+// An undeclared ?scenario= is held here and thrown at the top of main(), so the
+// loading overlay shows the refusal before any scene request.
+let canonicalSelection = null, canonicalSelectionError = null;
+try { canonicalSelection = canonicalCandidate(window.DT_SITE, location.search, location.href); } catch (err) { canonicalSelectionError = err; }
+const canonicalManifestUrl = canonicalSelection?.url ?? null;
+const canonicalScenario = canonicalSelection?.scenario ?? null;
 // Frameless sites must not display another site's scenario/transport controls.
 document.body.classList.toggle('no-scenarios', window.DT_SITE.scenarios === false);
 document.body.classList.toggle('no-playback', window.DT_SITE.scenarios === false && !canonicalManifestUrl);
@@ -2663,9 +2893,10 @@ document.body.classList.toggle('no-playback', window.DT_SITE.scenarios === false
 // baked look (vertex colours or the flat default) is remembered on first touch
 // and restored whenever the frame's token does not override — including
 // frame zero after Reset. Hard cut, no tween: the ruling forbids animation.
-function applyCanonicalPresentation(presentation) {
-  const paint = presentationPaint(presentation, authoredPropRegistry.keys());
-  for (const [propId, entry] of authoredPropRegistry) {
+function applyCanonicalPresentation(presentation, propIds = authoredPropRegistry.keys()) {
+  const paint = presentationPaint(presentation, propIds);
+  for (const propId of Object.keys(paint)) {
+    const entry = authoredPropRegistry.get(propId);
     const target = paint[propId];
     entry.scene.traverse((o) => {
       if (!o.isMesh || !o.material?.color) return;
@@ -2690,10 +2921,35 @@ function renderCanonicalState(state, force = false) {
   document.getElementById('scrubber').value = state.elapsedSeconds;
   document.getElementById('frame-counter').textContent = `${state.frameIndex + 1} / ${canonicalAdapter.frameTimesSeconds.length}`;
   const time = `${Math.floor(state.elapsedSeconds / 60).toString().padStart(2, '0')}:${Math.floor(state.elapsedSeconds % 60).toString().padStart(2, '0')}`;
-  document.getElementById('time-display').textContent = time;
-  document.getElementById('story-time').textContent = `${time} / ${canonicalAdapter.durationSeconds}s`;
-  if (!force && canonicalProjection?.frameIndex === state.frameIndex) return;
-  canonicalProjection = canonicalAdapter.selectFrame(state.frameIndex);
+  const suppliedTime = canonicalProjection?.frameIndex === state.frameIndex
+    ? canonicalProjection.environment?.time_of_day : null;
+  const displayTime = suppliedTime || time;
+  document.getElementById('time-display').textContent = displayTime;
+  document.getElementById('story-time').textContent = `${displayTime} / ${canonicalAdapter.durationSeconds}s`;
+  if (!force && !canonicalRenderFailed && canonicalProjection?.frameIndex === state.frameIndex) return;
+  const nextProjection = canonicalAdapter.selectFrame(state.frameIndex);
+  try {
+    applyCanonicalEnvironment(nextProjection.environment);
+  } catch (err) {
+    // Keep the last accepted scene and projection; a rejected frame must never
+    // become the cache hit that lets the next rAF bypass environment validation.
+    canonicalRenderFailed = true;
+    canonicalClock.setPlaying(false);
+    playing = false;
+    document.getElementById('btn-play').textContent = '▶ Play';
+    document.getElementById('btn-play').classList.remove('active');
+    document.getElementById('story-beat').textContent = 'Playback paused';
+    document.getElementById('story-text').textContent = `Playback paused at frame ${state.frameIndex + 1}: ${err.message}`;
+    document.getElementById('story-card').classList.remove('hidden');
+    return;
+  }
+  canonicalProjection = nextProjection;
+  canonicalRenderFailed = false;
+  const frameTime = canonicalProjection.environment?.time_of_day;
+  if (frameTime) {
+    document.getElementById('time-display').textContent = frameTime;
+    document.getElementById('story-time').textContent = `${frameTime} / ${canonicalAdapter.durationSeconds}s`;
+  }
   applyCanonicalPresentation(canonicalProjection.presentation);
   document.getElementById('act-badge').textContent = canonicalProjection.beatLabel;
   document.getElementById('story-beat').textContent = canonicalProjection.beatLabel;
@@ -2701,8 +2957,15 @@ function renderCanonicalState(state, force = false) {
   text.replaceChildren();
   const notices = document.createElement('details'); notices.className = 'canonical-notices';
   const noticeSummary = document.createElement('summary');
-  noticeSummary.textContent = '模擬候選資料 · 非農場操作建議'; notices.appendChild(noticeSummary);
-  for (const notice of [...canonicalProjection.notices, '展示六塊田的模擬階段、擴散與通知。']) {
+  const legacySiteDeclaration = !Object.hasOwn(window.DT_SITE, 'dtContract');
+  noticeSummary.textContent = window.DT_SITE.canonicalNoticeSummary
+    ?? (legacySiteDeclaration ? LEGACY_CANONICAL_NOTICE_SUMMARY : '模擬候選資料');
+  notices.appendChild(noticeSummary);
+  // Overview notices belong to the selected site's declaration. A named
+  // scenario supplies its own description through the candidate instead.
+  const siteNotices = canonicalScenario ? [`模擬情境：${canonicalScenario}（宣告的候選資料）。`]
+    : (window.DT_SITE.canonicalNotices ?? (legacySiteDeclaration ? LEGACY_CANONICAL_NOTICES : []));
+  for (const notice of [...canonicalProjection.notices, ...siteNotices]) {
     const row = document.createElement('div'); row.textContent = notice; notices.appendChild(row);
   }
   text.appendChild(notices);
@@ -2743,7 +3006,10 @@ async function loadCanonicalPlayback() {
   const scrubber = document.getElementById('scrubber'); scrubber.max = canonicalAdapter.durationSeconds; scrubber.step = '0.01';
   for (const id of ['scenario-select', 'btn-cinema', 'btn-toggle-story', 'btn-toggle-markers', 'btn-toggle-vehicles']) document.getElementById(id).style.display = 'none';
   const reset = document.createElement('button'); reset.id = 'btn-reset'; reset.className = 'btn'; reset.textContent = 'Reset';
-  reset.addEventListener('click', () => { canonicalProjection = null; renderCanonicalState(canonicalClock.reset(), true); });
+  reset.addEventListener('click', () => {
+    canonicalProjection = null; renderCanonicalState(canonicalClock.reset(), true);
+    window.dispatchEvent(new Event('dt:reset'));
+  });
   document.getElementById('btn-step-fwd').after(reset);
   renderCanonicalState(canonicalClock.reset(), true);
   // Use the site's existing close-oblique preset and existing camera transition path.
@@ -2888,7 +3154,8 @@ async function loadFrameData(scenario) {
   await rebuildNameIndex();  // node_metadata names now available (viewer-click-names)
   // twin → sim-node reverse link for the T2 card (sml-twin-projection-threading);
   // idempotent per scenario switch, same node_metadata registry either way.
-  setTwinToSimNodeIndex(buildTwinToSimNodeIndex(frameData.node_metadata));
+  _twinToSimNode = buildTwinToSimNodeIndex(frameData.node_metadata);
+  setTwinToSimNodeIndex(_twinToSimNode);
   if (gen !== frameLoadGen) return;   // superseded during narration/name loads
 
   document.getElementById('scrubber').max = frameData.frame_count - 1;
@@ -2904,6 +3171,7 @@ async function loadFrameData(scenario) {
   stopFollow();   // the followed id belongs to the OLD scenario's actor map
   createCohortActors();
   createVehicleActors();
+  refreshLabelBindings();   // balloons and the twin -> node index changed
 
   applyFrame(0);
 }
@@ -3345,6 +3613,11 @@ function buildViewpoints(site, geo) {
   for (const [name, vp] of Object.entries(site.viewpoints || {})) {
     if (vp.pos && vp.target) {
       out[name] = { pos: vp.pos.slice(), target: vp.target.slice() };
+      // Optional portrait variant: the same preset framed for a viewport
+      // taller than wide (flyTo picks it when camera.aspect < 1).
+      if (vp.portrait?.pos && vp.portrait?.target) {
+        out[name].portrait = { pos: vp.portrait.pos.slice(), target: vp.portrait.target.slice() };
+      }
       continue;
     }
     // Shared with cinema pose beats (D4: same math, one implementation).
@@ -3365,8 +3638,9 @@ function flyTo(arg) {
   mobileGestures?.cancel();
   let pos, target, duration = 1200, onArrive = null;
   if (typeof arg === 'string') {
-    const vp = VIEWPOINTS[arg];
-    if (!vp) return;
+    const preset = VIEWPOINTS[arg];
+    if (!preset) return;
+    const vp = preset.portrait && camera.aspect < 1 ? preset.portrait : preset;
     pos = vp.pos;
     target = vp.target;
   } else if (arg && typeof arg === 'object' && arg.pos && arg.target) {
@@ -4547,6 +4821,147 @@ function pickSimNodeAt(clientX, clientY) {
   return hits[0] || null;
 }
 
+// ── Twin inspection and label binding (twin-inspection-contract) ──────────
+// A twin's inspection is composed from its available views, each reading one
+// existing runtime record. WHICH views show and in what order is site
+// configuration (`inspector.views`); unset, labels use DEFAULT_LABEL_VIEWS and
+// ordinary clicks keep their standalone cards. A label's declared id is a twin
+// reference; it is bound iff its inspection has at least one view, regardless
+// of whether it came from poi_labels.json or a context-role manifest. Unbound
+// labels are flagged and never catch a click.
+const INSPECTOR_VIEWS_CONFIGURED = window.DT_SITE.inspector?.views ?? null;
+let _twinToSimNode = null;
+let _labelBindings = { total: 0, bound: 0, unbound: 0, unboundIds: [] };
+let _labelUnboundKey = '';
+
+function nodeViewElement(key) {
+  return typeof key === 'string'
+    ? buildNodeElement(key, DIAG.intersectionsById, frameData?.node_metadata) : null;
+}
+
+// The view's record for twin `key` (labelId: the clicked label's id), or null.
+function twinViewRecord(view, key, labelId) {
+  if (view === 'sources') {
+    const twinId = typeof key === 'string' ? frameData?.node_metadata?.[key]?.twin_id : null;
+    return resolveTwinLineageEntry(_twinLineageIndex, [labelId, key, twinId]);
+  }
+  if (view === 'descriptive') {
+    const twinId = typeof key === 'string' ? frameData?.node_metadata?.[key]?.twin_id : null;
+    for (const id of [labelId, key, twinId]) {
+      if (typeof id !== 'string' || id === '') continue;
+      const poi = _poiDescIndex.find((entry) => entry.id === id);
+      if (poi) return buildPoiDescriptionElement(poi.id, poi.entry);
+    }
+    return null;
+  }
+  if (view === 'node') {
+    const element = nodeViewElement(key);
+    if (!element) return null;
+    element.name = element.name || nameForTwin(element.id);
+    return { element, geometryReport: null };
+  }
+  if (view === 'typed') {
+    const element = typeof key === 'string' ? typedRuntime.getElement(key) : null;
+    if (!element) return null;
+    element.name = nameForTwin(element.id);
+    return { element, geometryReport: typedRuntime.getGeometryReport(key) };
+  }
+  return null;
+}
+
+function twinInspectionViews(order, key, labelId = null) {
+  return composeTwinViews(order, (view) => twinViewRecord(view, key, labelId));
+}
+
+// Open (or toggle closed) the composed inspection; hide when no view exists.
+function openTwinInspection(order, key, labelId = null) {
+  const views = twinInspectionViews(order, key, labelId);
+  if (views.length) toggleTwinInspection(key ?? labelId, views);
+  else hideInspector();
+  return 'twin-inspection';
+}
+
+// What a fly to a twin shows on arrival: the inspection a click on the same
+// target opens (a bound label's own inspection; else, for a typed twin, the
+// configured views or today's standalone card). Shown, never toggled, so the
+// arrival cannot close the card the double-click's first click opened.
+function inspectTwinOnArrive(element, inspection = null) {
+  const order = inspection?.order || INSPECTOR_VIEWS_CONFIGURED;
+  if (!order) {
+    showInspector(element, typedRuntime.getGeometryReport(element.id));
+    return;
+  }
+  const key = inspection ? inspection.key : element.id;
+  const labelId = inspection?.labelId ?? null;
+  const views = twinInspectionViews(order, key, labelId);
+  if (views.length) showTwinInspection(key ?? labelId, views);
+  else hideInspector();
+}
+
+// The twin key and view order a label click opens, or null for an unbound label.
+function labelTwinInspection(sprite) {
+  const ud = sprite?.userData;
+  if (!ud) return null;
+  const labelId = typeof ud.label_id === 'string' && ud.label_id !== '' ? ud.label_id : null;
+  if (!labelId) return null;
+  const key = resolveLabelTwin(labelId, {
+    hasTwin: (k) => twinRegistry.has(k)
+      && (typedRuntime.getElement(k) != null || nodeViewElement(k) != null),
+    twinToSimNode: _twinToSimNode,
+    hasSources: (k) => resolveTwinLineageEntry(_twinLineageIndex, [k]) !== null,
+  });
+  const order = INSPECTOR_VIEWS_CONFIGURED || DEFAULT_LABEL_VIEWS;
+  return twinInspectionViews(order, key, labelId).length ? { key, labelId, order } : null;
+}
+
+// Recomputed at startup end, after deferred meshes and after each frames load.
+// Flag, never reject: an unbound label still renders. Warn when the set changes.
+function refreshLabelBindings() {
+  _labelBindings = summarizeLabelBindings(
+    _poiLabels, labelTwinInspection, (sprite) => sprite.userData?.label_id ?? null);
+  const key = JSON.stringify(_labelBindings.unboundIds);
+  if (_labelBindings.unbound > 0 && key !== _labelUnboundKey) {
+    const shown = _labelBindings.unboundIds.slice(0, 10).join(', ');
+    console.warn(`[dt] ${_labelBindings.unbound} of ${_labelBindings.total} labels name no twin: ${shown}`);
+  }
+  _labelUnboundKey = key;
+}
+
+// Objects an embed extension registered with registerPickable, and their
+// descendants: visible meshes and sprites only, nearest first. The ordinary
+// feature raycast keeps only meshes and lets any nearer feature win, so a
+// sprite marker or a marker drawn on top of the scene would never be picked
+// there. Returns the raw hit (the embed adapter maps it to the registered
+// entity) or null.
+function pickExtensionAt(clientX, clientY) {
+  const targets = (window.__dtEmbed?.extensionPickTargets?.() ?? []).filter(isVisibleInTree);
+  if (!targets.length) return null;
+  raycaster.setFromCamera(pointerToNdc(clientX, clientY), camera);
+  return raycaster.intersectObjects(targets, true)
+    .find((hit) => (hit.object?.isMesh || hit.object?.isSprite) && isVisibleInTree(hit.object)) || null;
+}
+
+// Visible label sprites are depth-independent, so they need their own pick.
+// Only bound, visible labels are pick targets, regardless of their loader;
+// unbound labels let the click through to the geometry behind them. Returns a
+// hit that carries the label's twin inspection, or null.
+function pickLabelAt(clientX, clientY) {
+  const sprites = _poiLabels.filter((sprite) => isVisibleInTree(sprite));
+  if (!sprites.length) return null;
+  raycaster.setFromCamera(pointerToNdc(clientX, clientY), camera);
+  for (const labelHit of raycaster.intersectObjects(sprites, false)) {
+    const inspection = labelTwinInspection(labelHit.object);
+    if (!inspection) continue;
+    const id = inspection.key ?? inspection.labelId;
+    return {
+      point: labelHit.object.position.clone().setZ(labelHit.object.position.z - LABEL_LIFT_M),
+      distance: labelHit.distance,
+      object: { name: id, userData: { id, dt_twin_inspection: inspection } },
+    };
+  }
+  return null;
+}
+
 // Causal diagnosis sprites are real pick targets. Most render with depthTest=true
 // and reject hits occluded by terrain/features. Tall-support review markers are
 // intentionally depth-independent, so the shared axis-aware selector keeps them
@@ -4695,10 +5110,16 @@ function _synthesizeElementFromUserData(ud) {
 }
 
 // Post-raycast routing — extracted so tests can verify the dt_type string
-// equality check without needing pixel-perfect click coordinates. Returns
-// 'elevated' | 'typed' | 'synthesized' | 'none' to identify which branch fired.
+// equality check without needing pixel-perfect click coordinates. Returns the
+// name of the branch that fired (e.g. 'node' | 'typed' | 'synthesized' |
+// 'poi-description' | 'twin-inspection' | 'none').
 function routeHitToInspector(hit) {
   const ud = hit?.object?.userData;
+  // Only the synthetic hit of a bound label carries this.
+  if (ud?.dt_twin_inspection) {
+    const { order, key, labelId } = ud.dt_twin_inspection;
+    return openTwinInspection(order, key, labelId);
+  }
   if (ud?.authority_scope === CONTEXT_AUTHORITY_SCOPE) {
     const entry = contextRegistry.get(ud.context_id);
     if (entry?.inspection) toggleInspector(entry.inspection, null);
@@ -4810,6 +5231,7 @@ function routeHitToInspector(hit) {
     const nodeCard = buildNodeElement(
       String(ud.dt_edge_id), DIAG.intersectionsById, frameData?.node_metadata);
     if (nodeCard) {
+      if (INSPECTOR_VIEWS_CONFIGURED) return openTwinInspection(INSPECTOR_VIEWS_CONFIGURED, nodeCard.id);
       nodeCard.name = nodeCard.name || nameForTwin(nodeCard.id);
       toggleInspector(nodeCard, null);
       return 'node';
@@ -4825,6 +5247,7 @@ function routeHitToInspector(hit) {
   if (ud && ud.dt_edge_id && (NETWORK_DT.has(ud.dt_type) || ud.dt_type == null)) {
     const real = typedRuntime.getElement(ud.dt_edge_id);
     if (real) {
+      if (INSPECTOR_VIEWS_CONFIGURED) return openTwinInspection(INSPECTOR_VIEWS_CONFIGURED, real.id);
       real.name = nameForTwin(real.id);  // viewer-click-names
       const report = typedRuntime.getGeometryReport(ud.dt_edge_id);
       toggleInspector(real, report);
@@ -4857,6 +5280,9 @@ function routeHitToInspector(hit) {
   }
   const resolved = resolveTypedFromHit(hit);
   if (resolved?.element) {
+    if (INSPECTOR_VIEWS_CONFIGURED) {
+      return openTwinInspection(INSPECTOR_VIEWS_CONFIGURED, resolved.element.id);
+    }
     resolved.element.name = nameForTwin(resolved.element.id);  // viewer-click-names
     const report = typedRuntime.getGeometryReport(resolved.element.id);
     toggleInspector(resolved.element, report);
@@ -4877,8 +5303,16 @@ let _suppressClickUntil = 0;
 function handleCanvasPick(clientX, clientY) {
   // Visible causal squares have first claim on their own pixel, followed by the
   // existing sim-node diagnostic priority and then ordinary feature/terrain pick.
-  const hit = pickCausalDiagnosisAt(clientX, clientY)
-    || pickSimNodeAt(clientX, clientY)
+  // Objects an embed extension registered as pickable come next: the embedding
+  // app declared them as its own markers (often sprites drawn on top), so they
+  // must not lose the click to a feature standing in front of them in depth.
+  // Bound labels follow: a label is its twin's marker, so it opens that
+  // twin's inspection; unbound labels let the click through.
+  const priority = pickCausalDiagnosisAt(clientX, clientY) || pickSimNodeAt(clientX, clientY);
+  const extensionPick = priority ? null : pickExtensionAt(clientX, clientY);
+  const labelPick = priority || extensionPick ? null : pickLabelAt(clientX, clientY);
+  const marker = extensionPick || labelPick;
+  const hit = priority || marker
     || raycastHitsAt(clientX, clientY)[0]
     || raycastTerrainFast(clientX, clientY);   // empty-ground → analytic terrain
   routeHitToInspector(hit);
@@ -4887,8 +5321,10 @@ function handleCanvasPick(clientX, clientY) {
       detail: window.__dtEmbed.normalizePick(hit),
     }));
   }
-  // Existing tooltip line stays useful for terrain-Δ debugging
-  if (hit) {
+  // Existing tooltip line stays useful for terrain-Δ debugging (not for marker
+  // hits: the sprite floats above its anchor, so a Δ there means nothing).
+  if (marker) tooltip.textContent = '';
+  if (hit && !marker) {
     const resolved = resolveTypedFromHit(hit);
     const z = hit.point.z.toFixed(1);
     const tz = terrainSampler ? terrainSampler(hit.point.x, hit.point.y)?.toFixed(1) : '?';
@@ -4918,6 +5354,10 @@ function simulateClickOnTyped(typedSetId) {
   if (!element) {
     hideInspector();
     return { dismissed: true, reason: 'unknown-id' };
+  }
+  if (INSPECTOR_VIEWS_CONFIGURED) {
+    openTwinInspection(INSPECTOR_VIEWS_CONFIGURED, element.id);
+    return { typedSetId };
   }
   const report = typedRuntime.getGeometryReport(typedSetId);
   toggleInspector(element, report);
@@ -4997,15 +5437,17 @@ function flyTargetForElement(element) {
 // dblclick handler (three-viewer-controls R4): fly to clicked twin, then show
 // inspector. Named function so touch double-taps share the identical path.
 function handleCanvasDblPick(clientX, clientY) {
-  const hit = raycastHitsAt(clientX, clientY)[0];
+  // Same priority as the single click: causal squares and sim nodes, then bound labels.
+  const hit = pickCausalDiagnosisAt(clientX, clientY) || pickSimNodeAt(clientX, clientY)
+    || pickLabelAt(clientX, clientY) || raycastHitsAt(clientX, clientY)[0];
   const resolved = resolveTypedFromHit(hit);
   if (!resolved?.element) return;
   const dest = flyTargetForElement(resolved.element);
   if (!dest) return;
-  const report = typedRuntime.getGeometryReport(resolved.element.id);
+  const inspection = hit.object?.userData?.dt_twin_inspection ?? null;
   flyTo({
     ...dest,
-    onArrive: () => showInspector(resolved.element, report),
+    onArrive: () => inspectTwinOnArrive(resolved.element, inspection),
   });
 }
 
@@ -5021,10 +5463,9 @@ function simulateDblclickOnTyped(typedSetId) {
   if (!element) return { skipped: true, reason: 'unknown-id' };
   const dest = flyTargetForElement(element);
   if (!dest) return { skipped: true, reason: 'no-geometry' };
-  const report = typedRuntime.getGeometryReport(typedSetId);
   flyTo({
     ...dest,
-    onArrive: () => showInspector(element, report),
+    onArrive: () => inspectTwinOnArrive(element),
   });
   return { typedSetId };
 }
@@ -5069,9 +5510,8 @@ function gotoTwin(rawQuery) {
   const typed = typedRuntime.getElement(id);
   if (typed) {
     const dest = flyTargetForElement(typed);
-    const report = typedRuntime.getGeometryReport(id);
-    if (dest) flyTo({ ...dest, onArrive: () => showInspector(typed, report) });
-    else showInspector(typed, report);
+    if (dest) flyTo({ ...dest, onArrive: () => inspectTwinOnArrive(typed) });
+    else inspectTwinOnArrive(typed);
     return { found: true, kind: typed.twin_type || 'typed', id };
   }
   const obj = twinRegistry.get(id);
@@ -5273,6 +5713,7 @@ const MOBILE_MQ = window.matchMedia('(max-width: 768px), ((pointer: coarse) and 
     reset.addEventListener('click', () => {
       const first = Object.keys(VIEWPOINTS)[0];
       if (first) flyTo(first);
+      window.dispatchEvent(new Event('dt:reset'));
     });
   }
   const apply = () => mobileChrome.setMode(MOBILE_MQ.matches);
@@ -5294,6 +5735,7 @@ const LABEL_MAXDIST = { 1: Infinity, 2: 9000, 3: 4000 };
 // sites without the key keep the previous constant unchanged.
 const LABEL_SCREEN_H = window.DT_SITE.poiLabelScreenH || 0.026;
 const _poiLabels = [];
+const LABEL_LIFT_M = 30;   // label sprites float this far above their anchor
 
 function _makeLabelSprite(label) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -5324,7 +5766,7 @@ function _makeLabelSprite(label) {
   }));
   spr.scale.set(LABEL_SCREEN_H * (W / H), LABEL_SCREEN_H, 1);
   spr.center.set(0.5, 0);                       // anchor bottom-centre -> sits above the point
-  spr.position.set(label.x, label.y, label.z + 30);
+  spr.position.set(label.x, label.y, label.z + LABEL_LIFT_M);
   spr.renderOrder = 2000;
   return spr;
 }
@@ -5365,7 +5807,7 @@ async function loadPoiLabels(opts = {}) {
     try {
       if (!l || !Number.isFinite(l.x) || !Number.isFinite(l.y) || !Number.isFinite(l.z)) { bad++; continue; }
       const spr = _makeLabelSprite(l);
-      spr.userData = { rank: l.rank || 3 };
+      spr.userData = { rank: l.rank || 3, label_id: typeof l.id === 'string' ? l.id : null };
       if (contextInspection) {
         Object.assign(spr.userData, {
           authority_scope: CONTEXT_AUTHORITY_SCOPE,
@@ -5380,7 +5822,7 @@ async function loadPoiLabels(opts = {}) {
     } catch { bad++; }                           // one bad label must not stop the rest / boot
   }
   scene.add(group);
-  layerRoots[opts.layer || 'poiLabels'] = group;
+  adoptLayerRoot(opts.layer || 'poiLabels', group);
   if (contextInspection) {
     group.userData = {
       ...group.userData,
@@ -5404,6 +5846,20 @@ async function loadPoiLabels(opts = {}) {
 // buildings-surface click card; sites without a declaration emit no request.
 const POI_DESC_MAX_DIST_M = 40;   // building footprints reach ~30 m from the label anchor
 let _poiDescIndex = [];
+let _twinLineageIndex = null;
+
+async function loadTwinLineage() {
+  const response = await fetchDeclaredOptionalResource(
+    'twin-lineage', 'meshes/twin_lineage.json',
+  );
+  if (!response) return;
+  try {
+    _twinLineageIndex = loadTwinLineageIndex(await response.text());
+  } catch (error) {
+    console.warn(`[dt] twin-lineage index could not be read: ${error.message}`);
+    _twinLineageIndex = null;
+  }
+}
 
 async function loadPoiDescriptions() {
   const r = await fetchDeclaredOptionalResource(
@@ -5420,6 +5876,46 @@ function updatePoiLabelLOD() {
   for (const s of _poiLabels) {
     s.visible = cp.distanceTo(s.position) <= (LABEL_MAXDIST[s.userData.rank] ?? LABEL_MAXDIST[3]);
   }
+  declutterPoiLabels();
+}
+
+// Stack overlapping POI labels in screen space (stackLabelLifts): a lower-
+// priority label that would cover another is lifted above it through the
+// sprite's centre offset, so its world anchor never moves. A label that would
+// have to climb more than POI_LABEL_MAX_STACK levels is hidden instead, so a
+// dense view never grows towers far from their anchors. Recomputed only when
+// the camera, viewport or visible set changes.
+const POI_LABEL_MAX_STACK = 3;
+const _poiLabelNdc = new THREE.Vector3();
+let _poiLabelDeclutterKey = '';
+let _poiLabelOverflow = [];   // labels hidden by the last stacking pass
+function declutterPoiLabels() {
+  const width = window.innerWidth, height = window.innerHeight;
+  const key = `${width}x${height}|${camera.matrixWorld.elements.join(',')}|${camera.projectionMatrix.elements[5]}|`
+    + _poiLabels.map(s => (isVisibleInTree(s) ? 1 : 0)).join('');
+  if (key === _poiLabelDeclutterKey) {
+    for (const s of _poiLabelOverflow) s.visible = false;   // LOD just re-showed them
+    return;
+  }
+  _poiLabelDeclutterKey = key;
+  _poiLabelOverflow = [];
+  // A screen-constant sprite is scale * projection[5] NDC units tall.
+  const pxPerUnit = camera.projectionMatrix.elements[5] * height / 2;
+  const shown = [], items = [];
+  for (const s of _poiLabels) {
+    s.center.y = 0;
+    if (!isVisibleInTree(s)) continue;
+    _poiLabelNdc.copy(s.position).project(camera);
+    if (_poiLabelNdc.z < -1 || _poiLabelNdc.z > 1) continue;
+    shown.push(s);
+    items.push({ x: (_poiLabelNdc.x + 1) / 2 * width, y: (1 - _poiLabelNdc.y) / 2 * height,
+      w: s.scale.x * pxPerUnit, h: s.scale.y * pxPerUnit, rank: s.userData.rank });
+  }
+  const lifts = stackLabelLifts(items, 2, POI_LABEL_MAX_STACK);
+  shown.forEach((s, i) => {
+    if (lifts[i] === null) { s.visible = false; _poiLabelOverflow.push(s); return; }
+    s.center.y = -lifts[i] / items[i].h;
+  });
 }
 
 // ── Edge flow labels (viewer-edge-flow-labels) ─────────────────
@@ -5764,6 +6260,7 @@ function animate(now) {
 // ── Main ───────────────────────────────────────────────────────
 async function main() {
   try {
+    if (canonicalSelectionError) throw canonicalSelectionError;
     await window.__smlThreeTypedRuntimeReady;
     const terrain = await loadTerrain();
     if (window.DT_SITE.progressiveLoading && !terrain.terrain) {
@@ -5775,6 +6272,7 @@ async function main() {
       await loadPoiLabels();   // P4: screen-constant POI labels (physical_twins)
     }
     await loadPoiDescriptions();   // descriptive card registry (rides P4; before frames)
+    await loadTwinLineage();      // optional source rows; before label binding refresh
     // Z-fault diagnostics + goto index read the t2 edges/intersections JSON —
     // only when the site declares that pipeline (viewer-3d-site-agnostic D3).
     if (window.DT_hasLayer('intersections')) {
@@ -5797,6 +6295,7 @@ async function main() {
       }
     }
     await loadCanonicalPlayback();
+    refreshLabelBindings();
     setLoading('Ready', TOTAL_STEPS);
     hideLoading();
     requestAnimationFrame(animate);
@@ -5805,17 +6304,29 @@ async function main() {
         // Wait for the overlay's actual fade, including a zero-duration style.
         Promise.all(loadingOverlay.getAnimations().map((animation) => animation.finished))
           .then(deferredMeshes)
-          .catch((err) => {
-            console.error('Deferred scene meshes failed:', err);
-            const info = document.querySelector('#info');
-            if (info) info.textContent = `Scene details unavailable: ${err.message}`;
-          });
+          .then((failures) => {
+            refreshLabelBindings();   // deferred twins can bind labels
+            // Deferred authored props missed the startup paint of the current frame.
+            if (canonicalProjection) applyCanonicalPresentation(canonicalProjection.presentation);
+            const errors = failures.map((err) => err?.message || String(err));
+            if (errors.length) {
+              // A load that would have stopped a non-progressive startup
+              // (a declared context layer, a required resource, deferred
+              // edges or buildings) brings the error overlay back, so the
+              // story never plays on over a scene missing a declared layer.
+              for (const err of failures) console.error('Deferred scene detail failed:', err);
+              loadingStatus.textContent = `Error: Scene details unavailable: ${errors.join('; ')}`;
+              loadingOverlay.classList.remove('done');
+            }
+            window.dispatchEvent(new CustomEvent('dt:details-loaded', { detail: { errors } }));
+          })
+          .catch((err) => console.error('Deferred scene details could not be finished:', err));
       });
     }
     // Kiosk boot (§4): ?cinema=1 starts the film directly.
     if (window.DT_SITE.scenarios && new URLSearchParams(location.search).has('cinema')) playFilm();
   } catch (err) {
-    loadingStatus.textContent = `Error: ${err.message}`;
+    window.DT_reportFatalLoad(err);
     console.error(err);
   }
 }
@@ -5867,7 +6378,7 @@ async function loadWalkway3dOverlay() {
   );
   if (!head) return null;
 
-  const loader = new GLTFLoader();
+  const loader = await createSiteGLTFLoader(window.DT_SITE);
   return new Promise((resolve, reject) => {
     loader.load(
       url,
@@ -5992,6 +6503,8 @@ main().then(() => {
     typedObjectSummaryForId,
     nameForTwin,
     routeHitToInspector,   // viewer-click-names: drive the inspector path in tests
+    // twin-inspection-contract: label → twin binding summary (unbound = flagged).
+    labelBindings: () => ({ ..._labelBindings, unboundIds: [..._labelBindings.unboundIds] }),
     cameraState,
     // Test hook: project a world point to client (CSS) pixel coords so a
     // Playwright test can dispatch a real oblique-angle click at a known edge.

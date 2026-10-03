@@ -4,6 +4,14 @@ import {FrameStreamLoader} from '../frame-stream-loader.js';
 // priority reads; disable its unowned eager queue so disposal aborts every read.
 export class FieldFrames extends FrameStreamLoader {
   constructor(url){super(url);this.abort=new AbortController();this.pending=new Map();}
+  // Daily replay starts at 08:00. Read the envelope without fetching the
+  // inherited midnight chunk; ensure() loads only the requested frame pair.
+  async loadMetadata(){
+    this.meta=await this._fetchJSON(`${this.baseUrl}_meta.json`);
+    this.totalChunks=this.meta.chunks.length;
+    this.frames=new Array(this.meta.frame_count);
+    return this.meta;
+  }
   async _fetchJSON(url){const response=await fetch(url,{signal:this.abort.signal});if(!response.ok)throw new Error(`Field HTTP ${response.status}`);return response.json();}
   async _runSequentialQueue() {}
   async ensure(i0,i1){

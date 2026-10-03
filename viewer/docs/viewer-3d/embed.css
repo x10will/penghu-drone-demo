@@ -22,3 +22,19 @@ html.dt-embed #dt-embed-navigation #viewpoints {
   display: flex !important; position: static; flex-basis: 100%; flex-wrap: wrap;
   justify-content: flex-end; gap: 6px; max-height: 25vh; overflow: auto; pointer-events: auto;
 }
+/* compactNav=1 with a touch pointer: pinch zooms, so the zoom buttons go and
+   the viewpoint buttons share the compass row. The row never wraps; the
+   viewpoints scroll sideways in the space left of the other buttons. The
+   mobile stylesheet makes #viewpoints a column, so the row is forced here.
+   Opt-in, so the default embed keeps every camera button visible. */
+@media (pointer: coarse) {
+  html.dt-embed.dt-embed-compact-nav #dt-embed-navigation { flex-wrap: nowrap; }
+  html.dt-embed.dt-embed-compact-nav #dt-embed-navigation #btn-zoom-in,
+  html.dt-embed.dt-embed-compact-nav #dt-embed-navigation #btn-zoom-out { display: none !important; }
+  html.dt-embed.dt-embed-compact-nav #dt-embed-navigation #viewpoints {
+    flex: 1 1 0; flex-direction: row; flex-wrap: nowrap; justify-content: flex-start;
+    min-width: 0; max-height: none; overflow-x: auto; overflow-y: hidden;
+  }
+  html.dt-embed.dt-embed-compact-nav #dt-embed-navigation #viewpoints > :first-child { margin-left: auto; }
+  html.dt-embed.dt-embed-compact-nav #dt-embed-navigation #viewpoints button { flex: none; }
+}

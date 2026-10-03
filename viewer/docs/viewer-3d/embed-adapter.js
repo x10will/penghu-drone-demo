@@ -14,6 +14,12 @@ function install() {
   let dt, map, timedMap, clock, extensions, started = false, disposed = false, resizeFrame, viewTimer, counterObserver, resizeObserver;
   const highlights = [];
   const cleanups = [];
+  // A progressive site announces ready before its props and context layers
+  // exist. A highlight or flyTo whose ids are still missing waits here, the
+  // latest command of each kind winning, and runs once the details land.
+  let detailsPending = !!window.DT_SITE.progressiveLoading;
+  let detailsMessage = null;
+  const waiting = new Map();
   const listen = (target, name, fn) => {
     target.addEventListener(name, fn);
     cleanups.push(() => target.removeEventListener(name, fn));
@@ -27,6 +33,8 @@ function install() {
           site: window.DT_SITE.id, localToGeo: window.DT_localToGeo });
       } catch (error) { console.error('Embed pick normalization failed', error); return PICK_FAILED; }
     },
+    // Objects an extension registered with registerPickable; the canvas pick tries them first.
+    extensionPickTargets: () => extensions?.pickTargets() ?? [],
     destroy,
   };
   const canonicalRequested = params.get('canonical') === '1';
@@ -46,8 +54,21 @@ function install() {
     console.error(api.error);
     return null;
   });
-  listen(window, 'dt:select', event => { if (event.detail !== PICK_FAILED) map?.select(event.detail); });
+  listen(window, 'dt:select', event => {
+    waiting.clear();   // A pick is newer intent than a command still waiting.
+    if (event.detail !== PICK_FAILED) map?.select(event.detail);
+  });
+  // Reset (camera or canonical playback) drops commands still waiting, so a
+  // stale flyTo cannot move the camera once the details land.
+  listen(window, 'dt:reset', () => waiting.clear());
   listen(window, 'dt:ready', start);
+  listen(window, 'dt:details-loaded', event => {
+    detailsPending = false;
+    detailsMessage = { errors: event.detail?.errors || [] };
+    if (!started) return;
+    for (const [kind, payload] of [...waiting]) { waiting.delete(kind); handlers[kind](payload); }
+    announceDetails();
+  });
   listen(window, 'pagehide', event => { if (!event.persisted) destroy(); });
   // A dynamic import can finish after main's ready hook. The success marker
   // distinguishes a landed scene from main's caught-error debug API.
@@ -63,10 +84,24 @@ function install() {
     const twin = dt.twinRegistry.get(id);
     if (twin) return [twin];
     const matches = [];
+    // Topology Nodes (nodes.glb) carry their id in dt_node_id. GLTFLoader
+    // sanitizes node names (":" becomes "_"), so URN ids miss twinRegistry.
     dt.scene.traverse(object => {
-      if (object.userData?.typedSetId === id) matches.push(object);
+      if (object.userData?.typedSetId === id || object.userData?.dt_node_id === id) matches.push(object);
     });
     return matches;
+  }
+
+  // Edges render merged into one batched mesh, so an Edge has no object to
+  // box. Its path comes from the edges.json record the viewer already loaded.
+  function edgePoints(id) {
+    const polyline = dt.diagnostics?.edgeById?.get(id)?.polyline_3d;
+    if (!Array.isArray(polyline) || polyline.length < 2) return null;
+    return polyline.map(([lat, lon, z]) => {
+      const [x, y] = dt.geoToLocal(lat, lon);
+      const height = Number.isFinite(Number(z)) ? Number(z) : window.DT_SITE.cameraTargetZ;
+      return new THREE.Vector3(x, y, height + 0.3);
+    });
   }
 
   function clearHighlight() {
@@ -75,16 +110,35 @@ function install() {
     }
   }
 
-  function flyTo({ target } = {}) {
+  // Tells the host the deferred details are in, with the now-complete layer
+  // list and any detail that failed to load.
+  function announceDetails() {
+    if (!detailsMessage || !api.ready || !map) return;
+    map.appEvent?.('dt:details-loaded', { layers: layers(), errors: detailsMessage.errors });
+    detailsMessage = null;
+  }
+
+  function flyTo(payload = {}) {
+    let { target } = payload;
+    waiting.delete('flyTo');
+    // The vendored client also validates the legacy string form {target: "id"}.
+    if (typeof target === 'string') target = { id: target };
     if (!target || typeof target !== 'object' || Array.isArray(target)) return;
-    if (typeof target.id === 'string' && target.lon === undefined && target.lat === undefined && target.alt === undefined) {
+    // Client precedence (map-client.js): a string id wins and any coordinates
+    // beside it are ignored; only a target without a string id is lon/lat.
+    if (typeof target.id === 'string') {
       const objects = objectsForId(target.id);
+      if (!objects.length && detailsPending
+          && !dt.goto.edgeEntries.some(entry => entry.id === target.id)) {
+        waiting.set('flyTo', payload);
+        return;
+      }
       if (objects.length) frameObjects(objects);
       else if (dt.goto.edgeEntries.some(entry => entry.id === target.id)
           || window.smlViewerRuntime?.getElement(target.id)) dt.gotoTwin(target.id);
       return;
     }
-    if (target.id !== undefined || !Number.isFinite(target.lon) || !Number.isFinite(target.lat)
+    if (!Number.isFinite(target.lon) || !Number.isFinite(target.lat)
         || Math.abs(target.lon) > 180 || Math.abs(target.lat) > 90
         || (target.alt !== undefined && !Number.isFinite(target.alt))) return;
     const [x, y] = dt.geoToLocal(target.lat, target.lon);
@@ -110,18 +164,36 @@ function install() {
     dt.flyTo({ target: center.toArray(), pos: position.toArray() });
   }
 
-  function highlight({ ids } = {}) {
+  function highlight(payload = {}) {
+    const { ids } = payload;
+    waiting.delete('highlight');
     if (!Array.isArray(ids) || !ids.every(id => typeof id === 'string')) return;
-    const objects = ids.flatMap(objectsForId);
-    if (ids.length && !objects.length) return; // Unknown ids do not clear a known highlight.
+    const objects = [], paths = [], unresolved = [];
+    for (const id of ids) {
+      const found = objectsForId(id);
+      const points = found.length ? null : edgePoints(id);
+      if (found.length) objects.push(...found);
+      else if (points) paths.push(points);
+      else unresolved.push(id);
+    }
+    // Draw what exists now, and draw the whole set again once details land.
+    if (unresolved.length && detailsPending) waiting.set('highlight', payload);
+    else if (unresolved.length) console.warn(`Embed highlight: unresolved ids ${unresolved.join(', ')}`);
+    if (ids.length && !objects.length && !paths.length) return; // Unknown ids do not clear a known highlight.
     clearHighlight();
-    for (const object of new Set(objects)) {
-      const helper = new THREE.BoxHelper(object, 0xffd166);
+    const add = helper => {
       helper.name = 'dt-embed-highlight';
       helper.material.depthTest = false;
       helper.renderOrder = 1000;
       helper.raycast = () => {}; // Presentation only; never intercept a feature pick.
       dt.scene.add(helper); highlights.push(helper);
+    };
+    for (const object of new Set(objects)) add(new THREE.BoxHelper(object, 0xffd166));
+    for (const points of paths) {
+      const path = new THREE.CurvePath();
+      for (let i = 1; i < points.length; i++) path.add(new THREE.LineCurve3(points[i - 1], points[i]));
+      add(new THREE.Mesh(new THREE.TubeGeometry(path, (points.length - 1) * 4, 0.35, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffd166 })));
     }
   }
 
@@ -224,6 +296,10 @@ function install() {
       requestAnimationFrame(() => {
         if (!disposed) {
           map.ready(readyInfo); api.ready = true;
+          if (!detailsPending) {
+            for (const [kind, queued] of [...waiting]) { waiting.delete(kind); handlers[kind](queued); }
+          }
+          announceDetails();
           extensions = createExtensions({ THREE, dt, site: window.DT_SITE,
             translateCameraTarget: api.translateCameraTarget,
             setCameraPose: api.setCameraPose,

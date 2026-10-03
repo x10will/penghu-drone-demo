@@ -1,6 +1,7 @@
 /** Bridge the public panel-core map facade to Penghu's snapshot-only viewer. */
 export function createDailyMap({map, run, onStatus = () => {}, onSelectResource, onSelectOrder,
-  onFieldStatus = () => {}, onCamera = () => {}, onHazardVisibility = () => {}, hazardVisible: initialHazardVisible = true}) {
+  onFieldStatus = () => {}, onCamera = () => {}, onHazardVisibility = () => {}, hazardVisible: initialHazardVisible = true,
+  scenarioId = 'delivery'}) {
   let ready = false, latest = null, focused = null, destroyed = false;
   let camera = {mode: 'free', resourceId: 'D-01'}, hazardVisible = initialHazardVisible, trialPlan = null;
   const send = (name, payload) => map.send('appCommand', {name, payload});
@@ -9,7 +10,9 @@ export function createDailyMap({map, run, onStatus = () => {}, onSelectResource,
     if (destroyed) return;
     if (name === 'twin:ready' && payload?.daily) {
       ready = true;
-      send('daily:init', {sites: run.fixture.sites, movements: run.movements, resources: run.fixture.resources});
+      send('daily:init', {sites: run.fixture.sites,
+        movements: scenarioId === 'delivery' ? run.movements : [],
+        resources: scenarioId === 'delivery' ? run.fixture.resources : []});
       send('daily:options', {camera, hazardVisible});
       send('daily:trial', trialPlan);
       if (latest) send('daily:snapshot', latest);

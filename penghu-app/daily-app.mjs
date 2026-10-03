@@ -3,14 +3,15 @@ import {BASELINE_FIXTURE} from './daily-fixture.mjs';
 import {simulateDay, snapshotAt} from './daily-simulation.mjs';
 import {createDailyMap} from './daily-map.mjs';
 import {createDailyPanels, minuteLabel} from './daily-panels.mjs';
-import {createCameraControls, createHazardControls, createScenarioLauncher} from './daily-controls.mjs';
+import {createCameraControls, createHazardControls} from './daily-controls.mjs';
 import {createTrialPlanner} from './daily-route-panel.mjs';
 import {FLIGHT_LEAD_H} from './scenario-clock.mjs';
-import {resolveScenario, SCENARIOS} from './scenario.mjs';
+import {resolveScenario, SCENARIOS, scenarioHref} from './scenario.mjs';
 
 // daily-gate.mjs has already refused an unknown ?scenario=.
 const {scenario} = resolveScenario(location.search);
 const isDrone = scenario.id === 'drone';
+const isDelivery = scenario.id === 'delivery';
 
 const run = simulateDay(BASELINE_FIXTURE);
 const startMin = run.startMin;
@@ -19,12 +20,13 @@ const duration = (endMin - startMin) * 60_000;
 const initialSnapshot = snapshotAt(run, startMin);
 const listeners = new Set();
 let state = {
+  scenarioId: scenario.id,
   snapshot: initialSnapshot,
   selectedOrderId: run.fixture.plan.sequence[0],
   selectedEventId: null,
   focusedResourceId: null,
   mapStatus: {ready: false},
-  camera: {mode: 'free', resourceId: 'D-01'},
+  camera: {mode: 'free', resourceId: isDelivery ? 'D-01' : 'trial'},
   // The risk field starts hidden only in the delivery check; the trial avoids it, so the drone check shows it.
   hazardVisible: scenario.id !== 'delivery',
   fieldStatus: {loading: true},
@@ -52,7 +54,6 @@ const stopTrialPlayback = (pause = false) => {
     app?.clock.seek(app.clock.time);
   }
 };
-const resourcePanelId = id => `resource-${id.toLowerCase()}`;
 const actions = {
   selectOrder(id, {focus = false} = {}) {
     if (!run.fixture.orders.some(order => order.id === id)) return;
@@ -62,8 +63,8 @@ const actions = {
   selectResource(id, {focus = false} = {}) {
     if (!run.fixture.resources.some(resource => resource.id === id)) return;
     store.set({focusedResourceId: id, camera: {...store.get().camera, mode: 'free', resourceId: id}});
-    dailyMap?.focusResource(id);
-    if (focus) app?.focus(resourcePanelId(id));
+    if (isDelivery) dailyMap?.focusResource(id);
+    if (focus) app?.focus('resource-status');
   },
   overview() {
     store.set({focusedResourceId: null, camera: {...store.get().camera, mode: 'free'}});
@@ -82,12 +83,6 @@ const actions = {
     if (event?.siteId) dailyMap?.focusSite(event.siteId);
     else if (event) dailyMap?.overview();
   },
-  replay() {
-    stopTrialPlayback();
-    store.set({selectedEventId: null});
-    app.clock.seek(0);
-    app.clock.play();
-  },
   setCamera(camera) {
     store.set({camera, focusedResourceId: camera.mode === 'free' ? null : camera.resourceId});
     dailyMap?.setCamera(camera);
@@ -97,11 +92,11 @@ const actions = {
     if (store.get().trialPlan !== trialPlan) stopTrialPlayback(true);
     const camera = store.get().camera;
     if (!trialPlan && camera.resourceId === 'trial') {
-      const reset = {mode: 'free', resourceId: 'D-01'};
+      const reset = {mode: 'free', resourceId: isDelivery ? 'D-01' : 'trial'};
       store.set({trialPlan, camera: reset, focusedResourceId: null});
     } else store.set({trialPlan});
     dailyMap?.setTrialPlan(trialPlan);
-    if (trialPlan && isDrone) actions.setCamera({mode: 'tail', resourceId: 'trial'});
+    if (trialPlan) actions.focusTrial();
   },
   focusTrial() {
     if (!store.get().trialPlan) return;
@@ -115,57 +110,45 @@ const actions = {
     trialArrivalElapsed = (trial.itinerary.arrive_h * 60 - startMin) * 60_000;
     app.clock.pause();
     app.clock.seek((start - startMin) * 60_000);
-    const camera = {...store.get().camera, resourceId: 'trial', ...(isDrone ? {mode: 'tail'} : {})};
+    const camera = {...store.get().camera, resourceId: 'trial'};
     store.set({selectedEventId: null, camera, focusedResourceId: camera.mode === 'free' ? null : 'trial'});
     dailyMap?.frameTrial?.();
     app.clock.play();
   },
 };
-const {dailyPlan, orderDetail, resource} = createDailyPanels({run, store, actions});
-const cameraControls = createCameraControls({run, store, actions});
+const {dailyPlan, orderDetail, resourceStatus} = createDailyPanels({run, store, actions});
+const cameraControls = createCameraControls({run, store, actions, scenarioId: scenario.id});
 const hazardControls = createHazardControls({store, actions, legendOpen: scenario.id === 'hazard'});
-const scenarioLauncher = createScenarioLauncher();
 const trialPlanner = createTrialPlanner({run, store, actions});
-const resourcePanel = (id, x, y, w, h) => ({id: resourcePanelId(id), type: 'resource', resourceId: id, x, y, w, h});
-const launcher = (target, x, y, w, h) => ({id: `launch-${target}`, type: 'scenarioLauncher', scenarioId: target, x, y, w, h});
-const others = SCENARIOS.filter(item => item.id !== scenario.id).map(item => item.id);
-// Row 0 holds the active check's panels beside the map; the other two checks are launchers.
+// Nine 90px rows fit the desktop screen; navigation belongs in the header.
 const presets = {
   delivery: [
-    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 7},
-    {id: 'daily-plan', type: 'dailyPlan', x: 6, y: 0, w: 3, h: 7},
-    {id: 'order-detail', type: 'orderDetail', x: 9, y: 0, w: 3, h: 7},
-    {id: 'camera-controls', type: 'cameraControls', x: 0, y: 7, w: 4, h: 5},
-    launcher(others[0], 4, 7, 4, 2),
-    launcher(others[1], 4, 9, 4, 2),
-    resourcePanel('D-01', 8, 7, 4, 5),
-    resourcePanel('V-01', 0, 12, 6, 4),
-    resourcePanel('V-02', 6, 12, 6, 4),
+    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 6},
+    {id: 'daily-plan', type: 'dailyPlan', x: 6, y: 0, w: 3, h: 9},
+    {id: 'order-detail', type: 'orderDetail', x: 9, y: 0, w: 3, h: 9},
+    {id: 'resource-status', type: 'resourceStatus', x: 0, y: 6, w: 4, h: 3},
+    {id: 'camera-controls', type: 'cameraControls', x: 4, y: 6, w: 2, h: 3},
   ],
   drone: [
-    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 8},
-    {id: 'trial-planner', type: 'trialPlanner', x: 6, y: 0, w: 3, h: 8},
-    {id: 'hazard-controls', type: 'hazardControls', x: 9, y: 0, w: 3, h: 4},
-    {id: 'camera-controls', type: 'cameraControls', x: 9, y: 4, w: 3, h: 4},
-    resourcePanel('D-01', 0, 8, 6, 4),
-    launcher(others[0], 6, 8, 6, 2),
-    launcher(others[1], 6, 10, 6, 2),
+    {id: 'map', type: 'map', x: 0, y: 0, w: 6, h: 9},
+    {id: 'trial-planner', type: 'trialPlanner', x: 6, y: 0, w: 3, h: 9},
+    {id: 'hazard-controls', type: 'hazardControls', x: 9, y: 0, w: 3, h: 3},
+    {id: 'camera-controls', type: 'cameraControls', x: 9, y: 3, w: 3, h: 3},
+    {id: 'resource-status', type: 'resourceStatus', resourceIds: ['D-01'], x: 9, y: 6, w: 3, h: 3},
   ],
   hazard: [
     {id: 'map', type: 'map', x: 0, y: 0, w: 8, h: 9},
     {id: 'hazard-controls', type: 'hazardControls', x: 8, y: 0, w: 4, h: 4},
     {id: 'camera-controls', type: 'cameraControls', x: 8, y: 4, w: 4, h: 5},
-    launcher(others[0], 0, 9, 6, 2),
-    launcher(others[1], 6, 9, 6, 2),
   ],
 };
 const preset = presets[scenario.id];
 const manifest = {
   version: 1,
   // Each check remembers its own layout under its own ID.
-  id: `penghu-vaccine-daily-${scenario.id}-v2`,
+  id: `penghu-vaccine-daily-${scenario.id}-v3`,
   title: `澎湖疫苗配送 · ${scenario.title}`,
-  subtitle: `${run.fixture.date} · 模擬資料 · ${run.fixture.timezone}`,
+  subtitle: null,
   locale: 'zh-Hant',
   locales: ['zh-Hant'],
   mapUrl: mapUrl.href,
@@ -179,7 +162,7 @@ const manifest = {
     controls: true,
     labelFormat: elapsedMs => minuteLabel(startMin + elapsedMs / 60_000),
   },
-  panelTypes: {dailyPlan, orderDetail, resource, cameraControls, hazardControls, trialPlanner, scenarioLauncher},
+  panelTypes: {dailyPlan, orderDetail, resourceStatus, cameraControls, hazardControls, trialPlanner},
   // Every panel type stays available in every check; only the preset differs.
   catalogue: [
     {id: 'map', type: 'map', titleKey: '配送地圖', icon: '⌖', defaultSize: {w: 6, h: 7}},
@@ -188,10 +171,8 @@ const manifest = {
     {id: 'camera-controls', type: 'cameraControls', titleKey: '視角', icon: '◉', defaultSize: {w: 4, h: 5}},
     {id: 'hazard-controls', type: 'hazardControls', titleKey: '風險場', icon: '◐', defaultSize: {w: 4, h: 5}},
     {id: 'trial-planner', type: 'trialPlanner', titleKey: '航線試算', icon: '⌁', defaultSize: {w: 4, h: 5}},
-    ...run.fixture.resources.map(item => ({id: resourcePanelId(item.id), type: 'resource', resourceId: item.id,
-      titleKey: item.label, icon: item.type === 'drone' ? '◇' : '▣', defaultSize: {w: 4, h: 4}})),
-    ...others.map(target => ({id: `launch-${target}`, type: 'scenarioLauncher', scenarioId: target,
-      titleKey: `切換：${SCENARIOS.find(item => item.id === target).title}`, icon: '↗', defaultSize: {w: 4, h: 2}})),
+    {id: 'resource-status', type: 'resourceStatus', titleKey: '運具狀態', icon: '▣', defaultSize: {w: 4, h: 4},
+      ...(isDrone ? {resourceIds: ['D-01']} : {})},
   ],
   preset,
   layout: {phone: {order: preset.filter(item => item.type !== 'map').map(item => item.id),
@@ -201,6 +182,22 @@ const manifest = {
 document.title = `${scenario.title}｜今日配送計畫｜澎湖疫苗配送模擬`;
 
 app = createApp(document.querySelector('#app'), manifest);
+// App-owned shell adapter; the vendored kit stays byte-for-byte unchanged.
+const topbar = document.querySelector('.topbar');
+const checkSwitch = document.createElement('nav');
+checkSwitch.className = 'daily-check-switch'; checkSwitch.setAttribute('aria-label', '檢查情境');
+for (const check of SCENARIOS) {
+  const link = document.createElement('a'); link.textContent = check.title;
+  link.href = scenarioHref(check, location.href);
+  if (check.id === scenario.id) link.setAttribute('aria-current', 'page');
+  checkSwitch.append(link);
+}
+topbar.querySelector('.brand').after(checkSwitch);
+const headerTime = document.createElement('output'); headerTime.className = 'daily-header-time';
+topbar.querySelector('.topbar-controls').prepend(headerTime);
+const settingsBody = document.querySelector('.app-settings > div');
+settingsBody.prepend(...document.querySelector('.panel-manager > div').children);
+document.querySelector('.panel-manager').hidden = true;
 app.clock.pause();
 // The shell starts its interval during createApp. Seeking after pause refreshes the shell's play label.
 app.clock.seek(0);
@@ -209,12 +206,18 @@ app.clock.seek(0);
 // Pinned-kit adapter: replace these listeners when core exposes seek intent.
 // Owner and removal condition: OpenSpec core-panel-follow-up.md (clock events).
 const replayControls = document.querySelector('.replay-controls');
+for (const [caption, minute] of [['從頭', startMin], ['日終', endMin]]) {
+  const button = document.createElement('button'); button.type = 'button'; button.textContent = caption;
+  button.addEventListener('click', () => actions.seekMinute(minute));
+  replayControls.append(button);
+}
 const seekTargets = [replayControls?.querySelector('input[type="range"]'),
   replayControls?.querySelectorAll('button')[1], replayControls?.querySelectorAll('button')[2]].filter(Boolean);
 const onGlobalSeek = () => stopTrialPlayback();
 for (const target of seekTargets) target.addEventListener(target.tagName === 'INPUT' ? 'input' : 'click', onGlobalSeek, true);
 dailyMap = createDailyMap({
   map: app.map,
+  scenarioId: scenario.id,
   hazardVisible: store.get().hazardVisible,
   run,
   onStatus(status) {
@@ -236,6 +239,7 @@ const stopClock = app.clock.subscribe(elapsedMs => {
   }
   const timeMin = Math.min(endMin, startMin + elapsedMs / 60_000);
   const snapshot = snapshotAt(run, timeMin);
+  headerTime.textContent = `${run.fixture.date} · ${minuteLabel(timeMin)}`;
   store.set({snapshot});
   dailyMap.update(snapshot);
   if (elapsedMs >= duration && !app.clock.paused) {
