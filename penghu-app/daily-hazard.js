@@ -1,18 +1,32 @@
 import {FieldFrames} from './field-frames.js';
 import {frameLerp} from './timeline.mjs';
 import {cellStyle, sampledGrid} from './field-math.mjs';
+import {loadField, samplePlane} from './planner.mjs';
+import {DEFAULT_RISK, modifyRiskCell, normalizeRisk, riskHash} from './risk-scenario.mjs';
 
 const CELL_PX = 8;
 const PAINT_MS = 50;
 
 /** Paint the existing simulated danger field at the daily workspace's time. */
-export function createDailyHazard(api, {onStatus = () => {}} = {}) {
+export function createDailyHazard(api, {onStatus = () => {}, risk = DEFAULT_RISK, nodes = [], field = null} = {}) {
   const {THREE} = api;
   const loader = new FieldFrames(new URL('../data/danger_frames/danger', import.meta.url).href);
   let disposed = false, failed = false, visible = true, loading = true, error = null;
   let requestedTimeMin = 0, paintedTimeMin = null, frameState = null;
   let meta, mesh, geometry, material, texture, canvas, ctx;
   let timer = null, fetching = false, lastPaintAt = 0;
+  let scenario = normalizeRisk(risk), scenarioNodes = nodes, riskField = field, riskFieldPromise = null;
+
+  // Chunk JSON contains danger/margin only. Read the original float32 wind
+  // plane when wind changes, so land-pad samples agree with the route planner.
+  async function ensureRiskField() {
+    if (riskField || (scenario.windMultiplier === 1 && !scenario.events.some(event => event.kind === 'gust'))) return;
+    if (!riskFieldPromise) riskFieldPromise = loadField(meta,
+      new URL('../data/danger_frames/router_field.bin', import.meta.url), {signal: loader.abort.signal})
+      .then(value => { riskField = value; })
+      .finally(() => { riskFieldPromise = null; });
+    await riskFieldPromise;
+  }
 
   function report() {
     if (disposed) return;
@@ -33,11 +47,19 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
     if (!a || !b) throw new Error('Field frame pair is not ready');
     const [rows, cols] = meta.grid, blocked = new Uint8Array(rows * cols);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    let noFlyCells = 0;
+    let noFlyCells = 0, maxDanger = 0;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const danger = a.danger[r][c] + (b.danger[r][c] - a.danger[r][c]) * pair.frac;
-      const margin = a.margin[r][c] + (b.margin[r][c] - a.margin[r][c]) * pair.frac;
-      const style = cellStyle(danger, margin, !!meta.land[r][c], meta.danger_clamp, meta.safety_limit);
+      // Match the router at the safety boundary; chunk JSON is rounded for display.
+      const danger = riskField?.danger ? samplePlane(riskField, riskField.danger, r, c, timeMin / 60)
+        : a.danger[r][c] + (b.danger[r][c] - a.danger[r][c]) * pair.frac;
+      const margin = riskField?.margin ? samplePlane(riskField, riskField.margin, r, c, timeMin / 60)
+        : a.margin[r][c] + (b.margin[r][c] - a.margin[r][c]) * pair.frac;
+      const wind = riskField ? samplePlane(riskField, riskField.wind, r, c, timeMin / 60)
+        : Math.sqrt(Math.max(0, danger)) * (meta.assumptions?.find(item => item.key === 'u_ref_ms')?.value ?? 12);
+      const overlay = modifyRiskCell({danger, margin, wind, row: r, col: c, hour: timeMin / 60},
+        scenario, meta, scenarioNodes.length ? scenarioNodes : meta.pads ?? []);
+      const style = cellStyle(overlay.danger, overlay.margin, !!meta.land[r][c] && !overlay.prohibited,
+        meta.danger_clamp, scenario.safetyLimit);
       const x = c * CELL_PX, y = r * CELL_PX;
       ctx.fillStyle = `rgba(${style.rgba.join(',')})`;
       ctx.fillRect(x, y, CELL_PX, CELL_PX);
@@ -45,7 +67,11 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
         ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(x, y + CELL_PX); ctx.lineTo(x + CELL_PX, y); ctx.stroke();
       }
-      if (style.blocked) { blocked[r * cols + c] = 1; noFlyCells++; }
+      if (!meta.land[r][c]) maxDanger = Math.max(maxDanger, overlay.danger);
+      if (style.blocked) {
+        blocked[r * cols + c] = 1;
+        if (!meta.land[r][c]) noFlyCells++;
+      }
     }
     // Outline forbidden water as one contour rather than outlining every cell.
     ctx.strokeStyle = 'rgba(255,190,204,0.95)'; ctx.lineWidth = 1; ctx.beginPath();
@@ -59,7 +85,9 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
     ctx.stroke();
     texture.needsUpdate = true;
     paintedTimeMin = timeMin;
-    frameState = {...pair, noFlyCells};
+    frameState = {...pair, noFlyCells, maxDanger,
+      cellAreaKm2: meta.cell_m[0] * meta.cell_m[1] / 1e6,
+      riskHash: riskHash(scenario), safetyLimit: scenario.safetyLimit};
     mesh.userData.fieldState = {timeMin, ...frameState};
     mesh.visible = visible;
     lastPaintAt = Date.now();
@@ -91,6 +119,8 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
           if (pair.i0 !== current.i0 || pair.i1 !== current.i1) continue;
           throw cause;
         }
+        if (disposed || !visible) return;
+        await ensureRiskField();
         if (disposed || !visible) return;
         const latest = frameLerp(meta, requestedTimeMin / 60);
         if (pair.i0 !== latest.i0 || pair.i1 !== latest.i1) continue;
@@ -124,6 +154,18 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
     if (mesh) mesh.visible = visible && paintedTimeMin !== null;
     report();
     if (visible) schedule();
+  }
+
+  function setRisk(nextRisk, nodesOrWorld = scenarioNodes, nextField = null) {
+    if (disposed) return;
+    scenario = normalizeRisk(nextRisk);
+    scenarioNodes = Array.isArray(nodesOrWorld) ? nodesOrWorld : nodesOrWorld?.nodes ?? [];
+    if (nextField) riskField = nextField;
+    paintedTimeMin = null;
+    if (!failed) error = null;
+    loading = visible && !failed;
+    report();
+    schedule();
   }
 
   function dispose() {
@@ -168,5 +210,5 @@ export function createDailyHazard(api, {onStatus = () => {}} = {}) {
 
   report();
   void initialize();
-  return {setTime, setVisible, dispose};
+  return {setTime, setVisible, setRisk, dispose};
 }

@@ -56,10 +56,15 @@ function interp(field, arr, r, c, tH) {
   const frac = Math.min(Math.max(idx - i0, 0), 1);
   return arr[i0 * plane + k] * (1 - frac) + arr[i1 * plane + k] * frac;
 }
+export { interp as samplePlane };
 // danger + margin at (cell, time): the hard-wall quantity.
-export const sampleTotal = (field, r, c, tH) => field.total ? interp(field, field.total, r, c, tH)
-  : interp(field, field.danger, r, c, tH) + interp(field, field.margin, r, c, tH);
-export const sampleDanger = (field, r, c, tH) => interp(field, field.danger, r, c, tH);
+export const sampleTotal = (field, r, c, tH) => {
+  if (field.isProhibitedAt?.(r, c, tH)) return Infinity;
+  const overlay = field.riskSampleAt?.(r, c, tH);
+  return overlay ? overlay.danger + overlay.margin : field.total ? interp(field, field.total, r, c, tH)
+    : interp(field, field.danger, r, c, tH) + interp(field, field.margin, r, c, tH);
+};
+export const sampleDanger = (field, r, c, tH) => field.riskSampleAt?.(r, c, tH).danger ?? interp(field, field.danger, r, c, tH);
 
 // ── geometry ─────────────────────────────────────────────────
 export function cellMeters(field) {

@@ -6,6 +6,13 @@ import {initMapCredit} from './attribution.mjs';
 
 const DRAG_CANCEL_PX = 4, TAIL_WHEEL_RATE = 0.0015;
 const COLORS = {'D-01': '#67e4dc', 'V-01': '#ffd38a', 'V-02': '#a7baff'};
+const EXTRA_COLORS = ['#ff9f7f', '#a8df86', '#c5a4ff', '#ffbd62', '#69c7ff', '#f28bd2'];
+function resourceColor(id) {
+  if (COLORS[id]) return COLORS[id];
+  let hash = 2166136261;
+  for (const char of String(id ?? 'resource')) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  return EXTRA_COLORS[(hash >>> 0) % EXTRA_COLORS.length];
+}
 
 /** Public viewer extension. All geographic poses come from the parent snapshot. */
 export default function setup(api) {
@@ -44,7 +51,7 @@ export default function setup(api) {
   const actors = new Map(), labels = [], off = [], pickOff = [];
   off.push(initMapCredit(credit, document.body));
   let init = null, snapshot = null, disposed = false;
-  let cameraMode = {mode: 'free', resourceId: 'D-01'}, trialPlan = null, trialActor = null;
+  let cameraMode = {mode: 'free', resourceId: null}, trialPlan = null, trialActor = null;
   let pendingTrialFrame = false, lastFrame = null;
   const followCamera = new FollowCamera(api);
   const trialRoot = new THREE.Group(); trialRoot.name = 'daily-trial'; api.scene.add(trialRoot);
@@ -152,8 +159,8 @@ export default function setup(api) {
       url:new URL('../data/models/kenney-van/van.glb',import.meta.url).href, lengthM:5,
     });
     const group = visual.group; group.name = `daily-resource-${resource.id}`;
-    const color = COLORS[resource.id] || '#fff';
-    const captionText = `${resource.id} · ${resource.typeLabel ?? (resource.type === 'drone' ? '無人機' : resource.id === 'V-01' ? '配送車' : '接駁車')}`;
+    const color = resourceColor(resource.id);
+    const captionText = `${resource.id} · ${resource.typeLabel ?? (resource.type === 'drone' ? '無人機' : '配送車')}`;
     const caption = label(captionText, color, 'resource');
     caption.userData.label = captionText;
     caption.center.set(.5, resource.type === 'drone' ? -.4 : 1.6);
@@ -192,6 +199,9 @@ export default function setup(api) {
   function updateTargets() {
     if (!init) return;
     const items = [...init.resources, ...(trialPlan ? [{id: 'trial', label: '航線試算 · 預覽機'}] : [])];
+    if (!items.some(resource => resource.id === cameraMode.resourceId)) {
+      cameraMode = {...cameraMode, resourceId: items[0]?.id ?? (trialPlan ? 'trial' : null)};
+    }
     resourceSelect.replaceChildren(...items.map(resource => {
       const option = document.createElement('option'); option.value = resource.id; option.textContent = resource.label; return option;
     }));
@@ -202,7 +212,7 @@ export default function setup(api) {
     updateTargets();
     const unique = new Set();
     for (const movement of payload.movements) {
-      const key = `${movement.mode}:${movement.fromSiteId}:${movement.toSiteId}`;
+      const key = `${movement.mode}:${movement.resourceId}:${movement.fromSiteId}:${movement.toSiteId}:${movement.estimated ? 'estimated' : 'routed'}`;
       if (unique.has(key)) continue;
       unique.add(key);
       const path = [];
@@ -212,8 +222,11 @@ export default function setup(api) {
         for (let j = 0; j < count; j++) path.push(position({lat: a.lat + (b.lat-a.lat)*j/count, lng: a.lng+(b.lng-a.lng)*j/count}, movement.mode === 'air'));
       }
       path.push(position(movement.path.at(-1), movement.mode === 'air'));
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(path),
-        new THREE.LineBasicMaterial({color: movement.mode === 'air' ? '#67e4dc' : COLORS[movement.resourceId], depthTest: false, transparent: true, opacity: .8}));
+      const material = movement.estimated
+        ? new THREE.LineDashedMaterial({color: resourceColor(movement.resourceId), depthTest: false, transparent: true, opacity: .9, dashSize: 90, gapSize: 48})
+        : new THREE.LineBasicMaterial({color: movement.mode === 'air' ? '#67e4dc' : resourceColor(movement.resourceId), depthTest: false, transparent: true, opacity: .8});
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(path), material);
+      if (movement.estimated) line.computeLineDistances();
       line.name = `daily-path-${movement.id}`; line.renderOrder = 25; root.add(line);
     }
     for (const site of payload.sites) {
@@ -294,8 +307,12 @@ export default function setup(api) {
   }
   function setTrial(value) {
     clearTrial(); trialPlan = value;
+    if (!value) {
+      if (cameraMode.resourceId === 'trial') setCamera({mode:'free',resourceId:init?.resources?.[0]?.id ?? null}, true);
+      updateTargets();
+      return;
+    }
     updateTargets();
-    if (!value) { if (cameraMode.resourceId === 'trial') setCamera({mode:'free',resourceId:'D-01'}, true); return; }
     const actor = new RouteActor(api, value.itinerary, 'daily-trial', {
       label: '航線試算 · 預覽機', entity: {id:'daily-trial-drone',label:'航線試算 · 預覽機',type:'drone'},
     });
@@ -371,6 +388,7 @@ export default function setup(api) {
       if (name === 'daily:overview') overview(false);
       if (name === 'daily:trial') setTrial(payload);
       if (name === 'daily:frame-trial') frameTrial();
+      if (name === 'daily:risk') hazard.setRisk(payload?.risk, payload?.nodes ?? [], payload?.field);
       if (name === 'daily:options') {
         hazardToggle.checked = payload.hazardVisible; hazard.setVisible(payload.hazardVisible);
         setCamera(payload.camera);

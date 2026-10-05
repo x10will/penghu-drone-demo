@@ -1,5 +1,7 @@
+import {aircraftReference} from './data-sources.mjs';
 import {loadField, plan, label} from './planner.mjs';
 import {makeItinerary, poseAt, returnRequest, riskAt, safetyCost, TURNAROUND_MIN} from './timeline.mjs';
+import {DEFAULT_RISK, deriveRiskField, normalizeRisk} from './risk-scenario.mjs';
 
 const META_URL = new URL('../data/danger_frames/danger_meta.json', import.meta.url);
 const FIELD_URL = new URL('../data/danger_frames/router_field.bin', import.meta.url);
@@ -29,7 +31,8 @@ const refused = (reason_zh, outbound = null) => ({status: 'refused', reason_zh, 
 
 // This is also usable without the DOM for a direct check against the real field.
 // The caller keeps only an accepted itinerary in the daily store.
-export function calculateTrial({field, meta, request, startMin, endMin}) {
+export function calculateTrial({field, meta, request, startMin, endMin, risk, nodes}) {
+  if (risk) field = deriveRiskField(field, risk, nodes ?? meta.pads, meta.pads);
   const {fromId, toId, earliest, latest, roundtrip} = request;
   const earlyH = hours(earliest), lateH = hours(latest);
   if (!Number.isFinite(earlyH) || !Number.isFinite(lateH)) return refused('請輸入有效的起飛時間。');
@@ -63,7 +66,8 @@ export function calculateTrial({field, meta, request, startMin, endMin}) {
   }
 
   return {status: 'ok', itinerary: makeItinerary(outbound, back), pads: meta.pads,
-    safetyLimit: meta.safety_limit, request: {...request}, returnReason_zh};
+    safetyLimit: field.C?.SAFETY_LIMIT ?? meta.safety_limit, riskHash: field.riskHash,
+    request: {...request}, returnReason_zh};
 }
 
 function addRoute(parent, route, heading, safetyLimit) {
@@ -95,9 +99,16 @@ function addRoute(parent, route, heading, safetyLimit) {
   parent.append(section);
 }
 
-export function createTrialPlanner({run, store, actions}) {
+export function createTrialPlanner({run, store, actions, risk = DEFAULT_RISK, world = null, compactResults = false}) {
+  let scenario = normalizeRisk(risk), scenarioNodes = world?.nodes ?? [];
+  const riskViews = new Set();
   return {
     id: 'trialPlanner', title: '航線試算', icon: '◇', defaultSize: {w: 4, h: 7}, streams: [],
+    setRisk(nextRisk, nodesOrWorld = scenarioNodes) {
+      scenario = normalizeRisk(nextRisk);
+      scenarioNodes = Array.isArray(nodesOrWorld) ? nodesOrWorld : nodesOrWorld?.nodes ?? [];
+      for (const apply of riskViews) apply();
+    },
     render(container) {
       const root = el('section', 'daily-trial-panel');
       const intro = el('p', 'trial-intro', '試算不會改動今日配送計畫');
@@ -139,7 +150,10 @@ export function createTrialPlanner({run, store, actions}) {
       controls.append(start, fly, replay, clear);
       const result = el('div', 'trial-result');
       result.setAttribute('aria-live', 'polite');
-      root.append(intro, mockNote, form, status, clock, live, controls, result);
+      const resultDetails = el('details', 'trial-result-details');
+      resultDetails.open = !compactResults;
+      resultDetails.append(el('summary', '', '航線結果詳情'), result);
+      root.append(intro, mockNote, el('p', 'daily-aircraft-reference', aircraftReference(world?.meta, run.fixture)), form, status, clock, live, controls, resultDetails);
       container.append(root);
 
       const initial = store.get().trialPlan;
@@ -149,7 +163,8 @@ export function createTrialPlanner({run, store, actions}) {
         roundtrip.checked = initial.request.roundtrip;
       }
       let disposed = false, ready = false, busy = false, sequence = 0, timer = null;
-      let field = null, meta = null, localMessage = '', localOutbound = null;
+      let field = null, baseField = null, meta = null, localMessage = '', localOutbound = null;
+      let lastRequest = initial?.request ?? null;
       let loadError = '';
       let displayedPlan = undefined, displayedMessage = undefined, displayedOutbound = undefined;
       const abort = new AbortController();
@@ -211,7 +226,7 @@ export function createTrialPlanner({run, store, actions}) {
               result.append(el('p', 'trial-refusal', localOutbound.arrive_h * 60 > run.endMin
                 ? '航線超出今日時鐘，未建立試算預覽。'
                 : '僅出程可行；往返未成立，未建立試算預覽。'));
-              addRoute(result, localOutbound, '出程', meta.safety_limit);
+              addRoute(result, localOutbound, '出程', field?.C?.SAFETY_LIMIT ?? meta.safety_limit);
             }
             result.append(el('p', 'trial-refusal', message));
           }
@@ -233,24 +248,18 @@ export function createTrialPlanner({run, store, actions}) {
         if (store.get().trialPlan) actions.setTrialPlan(null);
         else refresh(store.get());
       };
-      for (const control of [from, to, earliest, latest, roundtrip]) {
-        control.addEventListener('input', () => invalidate('條件已變更；請重新規劃。'));
-        control.addEventListener('change', () => invalidate('條件已變更；請重新規劃。'));
-      }
-      form.addEventListener('submit', event => {
-        event.preventDefault();
-        if (planningBlock(store.get()) || busy || !form.reportValidity()) return;
+      const requestPlan = (request, automatic = false) => {
+        if (!ready || (!automatic && (planningBlock(store.get()) || busy))) return;
         invalidate('');
+        lastRequest = {...request};
         busy = true;
-        const request = {fromId: from.value, toId: to.value,
-          earliest: earliest.value, latest: latest.value, roundtrip: roundtrip.checked};
         const current = ++sequence;
         refresh(store.get());
         // Let the loading state paint before the synchronous original A* planner runs.
         timer = setTimeout(() => {
           timer = null;
           if (disposed || current !== sequence) return;
-          if (planningBlock(store.get())) { busy = false; refresh(store.get()); return; }
+          if (!automatic && planningBlock(store.get())) { busy = false; refresh(store.get()); return; }
           try {
             const outcome = calculateTrial({field, meta, request, startMin: run.startMin, endMin: run.endMin});
             if (disposed || current !== sequence) return;
@@ -271,6 +280,23 @@ export function createTrialPlanner({run, store, actions}) {
             refresh(store.get());
           }
         }, 0);
+      };
+      const applyScenario = () => {
+        if (!baseField || disposed) return;
+        field = deriveRiskField(baseField, scenario, scenarioNodes.length ? scenarioNodes : meta.pads, meta.pads);
+        if (lastRequest) requestPlan(lastRequest, true);
+      };
+      riskViews.add(applyScenario);
+      for (const control of [from, to, earliest, latest, roundtrip]) {
+        const changed = () => { lastRequest = null; invalidate('條件已變更；請重新規劃。'); };
+        control.addEventListener('input', changed);
+        control.addEventListener('change', changed);
+      }
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        requestPlan({fromId: from.value, toId: to.value,
+          earliest: earliest.value, latest: latest.value, roundtrip: roundtrip.checked});
       });
       start.addEventListener('click', () => {
         const accepted = store.get().trialPlan;
@@ -280,7 +306,7 @@ export function createTrialPlanner({run, store, actions}) {
       });
       fly.addEventListener('click', () => actions.playTrial?.());
       replay.addEventListener('click', () => actions.playTrial?.());
-      clear.addEventListener('click', () => invalidate(''));
+      clear.addEventListener('click', () => { lastRequest = null; invalidate(''); });
 
       (async () => {
         try {
@@ -290,7 +316,8 @@ export function createTrialPlanner({run, store, actions}) {
           if (disposed) return;
           const loadedField = await loadField(loadedMeta, FIELD_URL, {signal: abort.signal});
           if (disposed) return;
-          meta = loadedMeta; field = loadedField; ready = true;
+          meta = loadedMeta; baseField = loadedField; ready = true;
+          applyScenario();
           selectPads(meta.pads);
           from.disabled = to.disabled = false;
           refresh(store.get());
@@ -303,6 +330,7 @@ export function createTrialPlanner({run, store, actions}) {
       })();
       return {root, stop, abort, dispose: () => {
         disposed = true; sequence++;
+        riskViews.delete(applyScenario);
         abort.abort();
         if (timer != null) clearTimeout(timer);
         stop();

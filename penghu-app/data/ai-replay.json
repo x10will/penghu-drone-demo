@@ -1,0 +1,1844 @@
+{
+  "ops-replay-v1-f525267eb0dedae5": {
+    "request": {
+      "kind": "schedule",
+      "inputs": {
+        "nodes": [
+          {
+            "id": "N01",
+            "name": "澎湖機場",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5686,
+            "lng": 119.6294
+          },
+          {
+            "id": "N02",
+            "name": "七美機場",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.213,
+            "lng": 119.4176
+          },
+          {
+            "id": "N03",
+            "name": "望安機場",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3691,
+            "lng": 119.5035
+          },
+          {
+            "id": "N04",
+            "name": "馬公碼頭",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5626,
+            "lng": 119.5647
+          },
+          {
+            "id": "N05",
+            "name": "南滬港",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1946,
+            "lng": 119.419
+          },
+          {
+            "id": "N06",
+            "name": "望安碼頭",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.362,
+            "lng": 119.5082
+          },
+          {
+            "id": "N07",
+            "name": "赤崁漁港",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.6666,
+            "lng": 119.6039
+          },
+          {
+            "id": "N08",
+            "name": "虎井碼頭",
+            "island": "虎井",
+            "droneServable": true,
+            "lat": 23.4878,
+            "lng": 119.5141
+          },
+          {
+            "id": "N09",
+            "name": "衛福部澎湖醫院",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5642,
+            "lng": 119.5659
+          },
+          {
+            "id": "N10",
+            "name": "望安鄉衛生所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3617,
+            "lng": 119.497
+          },
+          {
+            "id": "N11",
+            "name": "吉貝衛生所",
+            "island": "吉貝",
+            "droneServable": true,
+            "lat": 23.7407,
+            "lng": 119.6138
+          },
+          {
+            "id": "N12",
+            "name": "澎湖科技大學",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5748,
+            "lng": 119.5833
+          },
+          {
+            "id": "N13",
+            "name": "七美鄉公所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2067,
+            "lng": 119.4245
+          },
+          {
+            "id": "N14",
+            "name": "望安鄉公所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3576,
+            "lng": 119.5002
+          },
+          {
+            "id": "N15",
+            "name": "七美鄉衛生所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "depot",
+            "name": "馬公模擬收貨冷庫",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5678,
+            "lng": 119.5672
+          },
+          {
+            "id": "magong-clinic",
+            "name": "馬公市第一衛生所（示意）",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5718,
+            "lng": 119.578
+          },
+          {
+            "id": "magong-transfer",
+            "name": "馬公模擬轉運點（岸上道路）",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5627434,
+            "lng": 119.5649863
+          },
+          {
+            "id": "qimei-clinic",
+            "name": "七美鄉衛生所（模擬配送點）",
+            "island": "七美",
+            "droneServable": false,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "qimei-transfer",
+            "name": "七美模擬轉運點（岸上道路）",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1959649,
+            "lng": 119.4187413
+          }
+        ],
+        "orders": [
+          {
+            "id": "ORD-MAGONG",
+            "label": "馬公市第一衛生所",
+            "destinationNodeId": "magong-clinic",
+            "doses": 80,
+            "deadlineMin": 660,
+            "receivingWindow": [
+              480,
+              780
+            ],
+            "priority": "routine"
+          },
+          {
+            "id": "ORD-QIMEI",
+            "label": "七美鄉衛生所",
+            "destinationNodeId": "qimei-clinic",
+            "doses": 40,
+            "deadlineMin": 570,
+            "receivingWindow": [
+              510,
+              840
+            ],
+            "priority": "island"
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "D-01",
+            "label": "D-01 七美配送無人機",
+            "type": "drone",
+            "baseNodeId": "magong-transfer",
+            "energyWh": 1600,
+            "reserveWh": 160,
+            "capacityKg": 3,
+            "capacityL": 5,
+            "profile": {
+              "idleW": 3,
+              "handlingW": 8,
+              "movingW": 25,
+              "travelWhPerKm": 12
+            }
+          },
+          {
+            "id": "V-01",
+            "label": "V-01 馬公配送車",
+            "type": "van",
+            "baseNodeId": "depot",
+            "energyWh": 8000,
+            "reserveWh": 500,
+            "capacityKg": 20,
+            "capacityL": 30,
+            "profile": {
+              "idleW": 18,
+              "handlingW": 35,
+              "movingW": 65,
+              "travelWhPerKm": 85
+            }
+          },
+          {
+            "id": "V-02",
+            "label": "V-02 七美接駁車",
+            "type": "van",
+            "baseNodeId": "qimei-clinic",
+            "energyWh": 3500,
+            "reserveWh": 300,
+            "capacityKg": 8,
+            "capacityL": 12,
+            "profile": {
+              "idleW": 14,
+              "handlingW": 30,
+              "movingW": 55,
+              "travelWhPerKm": 90
+            }
+          }
+        ],
+        "stock": {
+          "id": "MOCK-BATCH-0113",
+          "label": "模擬冷鏈疫苗批次",
+          "source": "臺灣本島供應（上游情境）",
+          "quantity": 200,
+          "availableAtMin": 420,
+          "initialTemperatureC": 4.4,
+          "upstreamHistory": [
+            {
+              "timeMin": 360,
+              "celsius": 4.2
+            },
+            {
+              "timeMin": 390,
+              "celsius": 4.3
+            },
+            {
+              "timeMin": 420,
+              "celsius": 4.4
+            }
+          ],
+          "nodeId": "depot",
+          "doses": 200,
+          "releaseMin": 420
+        },
+        "perDose": {
+          "massKg": 0.03,
+          "volumeL": 0.04
+        },
+        "startMin": 360,
+        "endMin": 1080,
+        "durationsMin": {
+          "packQimei": 12,
+          "packMagong": 10,
+          "loadQimei": 8,
+          "loadMagong": 7,
+          "handoverOrigin": 6,
+          "handoverQimei": 8,
+          "receiveQimei": 10,
+          "receiveMagong": 10
+        },
+        "risk": {
+          "windMultiplier": 1,
+          "events": [],
+          "safetyLimit": 1
+        },
+        "weatherTimeline": {
+          "baked": [
+            {
+              "kind": "baked-surge",
+              "fromH": 15,
+              "toH": 18,
+              "ampMs": 5,
+              "rampH": 2,
+              "label_zh": "基準強風"
+            }
+          ],
+          "windMultiplier": 1,
+          "userEvents": []
+        },
+        "weatherContext": {
+          "label": "冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）",
+          "date": "2027-01-13",
+          "baseWindMs": 10.9,
+          "windFromDeg": 25,
+          "windHeightM": 10,
+          "season": "12–2 月冬季東北季風"
+        },
+        "routeHints": [
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "magong-clinic",
+            "earliestRequestMin": 437,
+            "status": "ok",
+            "departMin": 437,
+            "arriveMin": 437.60014627125554,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "qimei-clinic",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 468.37522990876164,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。"
+          }
+        ],
+        "droneCapabilities": [
+          {
+            "id": "D-01",
+            "enduranceMin": 106,
+            "cruiseKph": 100.08,
+            "initialEnergyWh": 1600,
+            "reserveWh": 160,
+            "usableEnergyWh": 1440,
+            "travelWhPerKm": 12,
+            "idleW": 3,
+            "handlingW": 8,
+            "movingW": 25
+          }
+        ]
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是澎湖疫苗配送排程助理。只回覆 JSON 物件，不要宣稱通過驗證；數位孿生引擎會獨立驗證。\n格式：{\"assignments\":[{\"orderId\":\"訂單ID\",\"legs\":[{\"vehicleId\":\"運具ID\",\"from\":\"節點ID\",\"to\":\"節點ID\",\"departAfterMin\":540}]}],\"notes_zh\":\"簡短繁體中文說明\"}。departAfterMin 可省略。\n每個訂單恰好一次，一段只承載一筆訂單；第一段從 stock.nodeId 出發，後段從前段終點交接，末段抵達目的地。\n引擎依 assignments 順序排程，遵守批次放行、打包、裝載、交接、收貨、車輛空車調度與可用時間。\n配送車只能同島道路；無人機可以直接飛到節點表中的任何節點，包含衛生所、冷庫，droneServable 是建議轉運屬性，不是禁飛限制。末段可直接飛到訂單 destinationNodeId，省去接駁與交接。\nN15 與 qimei-clinic 是不同節點；訂單若目的地是 qimei-clinic，飛到 N15 後仍須補一段到 qimei-clinic，或直接飛到 qimei-clinic。\n無人機使用安全航線、單段 enduranceMin 續航與風險門檻，最後嘗試返航。droneCapabilities 給出各機可用 energyWh-reserveWh、每公里 travelWhPerKm 與待機/移動功率；空機調度也耗能源，不能只算載貨航段。\n必須守期限、收貨時窗、全程 2–8°C、保留電量、質量及體積容量與庫存；允許 departAfterMin 等待風險回落。\ndepartAfterMin 是該航段最早可出發的當日分鐘（09:00=540、10:30=630），引擎會在此前完成裝載/交接；不是飛行分鐘數。可讓貨件留在冷庫或冷藏車等風險回落，再交給無人機，避免在被動保冷箱內長時間等待。\n風險 danger=(風速/12)^2；windMultiplier 與 gust 乘數會疊加，nofly 的時間與半徑內禁止飛行。時鐘使用當日分鐘。\nweatherTimeline 包含基準風場強風時段及增量與使用者事件；使用者陣風結束不代表基準風險已回落。routeHints 是放行及打包裝載後，由同一航線規劃器選出的安全直飛時間（搜尋範圍受當日及規劃 horizon 限制），未計空機調度、共用運具、能源或冷鏈，不能當成方案通過證明；延後 departAfterMin 可能錯過強風前的可飛窗口。\nweatherContext 的日期與風速來自冬季統計校準的合成情境，非單日實測；基準風向北北東–東北、10 m 風速。午後增強設定幅度見 weatherTimeline.ampMs；兩端漸變在三小時脈衝內重疊，實際峰值增量為設定幅度的 75%。依實際 weatherTimeline、routeHints 與引擎判定。\n若無可行方案，可以在 notes_zh 明說不可行，指出不足的具體資源及可解決方法，例如新增哪個基地的無人機、增加多少能源、延後到何時；仍給最合理的完整指派供引擎判定，不能虛構已有運具或通過結果。"
+        },
+        {
+          "role": "user",
+          "content": "{\"droneCapabilities\":[{\"cruiseKph\":100.08,\"enduranceMin\":106,\"handlingW\":8,\"id\":\"D-01\",\"idleW\":3,\"initialEnergyWh\":1600,\"movingW\":25,\"reserveWh\":160,\"travelWhPerKm\":12,\"usableEnergyWh\":1440}],\"durationsMin\":{\"handoverOrigin\":6,\"handoverQimei\":8,\"loadMagong\":7,\"loadQimei\":8,\"packMagong\":10,\"packQimei\":12,\"receiveMagong\":10,\"receiveQimei\":10},\"endMin\":1080,\"nodes\":[{\"droneServable\":true,\"id\":\"N01\",\"island\":\"本島\",\"lat\":23.5686,\"lng\":119.6294,\"name\":\"澎湖機場\"},{\"droneServable\":true,\"id\":\"N02\",\"island\":\"七美\",\"lat\":23.213,\"lng\":119.4176,\"name\":\"七美機場\"},{\"droneServable\":true,\"id\":\"N03\",\"island\":\"望安\",\"lat\":23.3691,\"lng\":119.5035,\"name\":\"望安機場\"},{\"droneServable\":true,\"id\":\"N04\",\"island\":\"本島\",\"lat\":23.5626,\"lng\":119.5647,\"name\":\"馬公碼頭\"},{\"droneServable\":true,\"id\":\"N05\",\"island\":\"七美\",\"lat\":23.1946,\"lng\":119.419,\"name\":\"南滬港\"},{\"droneServable\":true,\"id\":\"N06\",\"island\":\"望安\",\"lat\":23.362,\"lng\":119.5082,\"name\":\"望安碼頭\"},{\"droneServable\":true,\"id\":\"N07\",\"island\":\"本島\",\"lat\":23.6666,\"lng\":119.6039,\"name\":\"赤崁漁港\"},{\"droneServable\":true,\"id\":\"N08\",\"island\":\"虎井\",\"lat\":23.4878,\"lng\":119.5141,\"name\":\"虎井碼頭\"},{\"droneServable\":true,\"id\":\"N09\",\"island\":\"本島\",\"lat\":23.5642,\"lng\":119.5659,\"name\":\"衛福部澎湖醫院\"},{\"droneServable\":true,\"id\":\"N10\",\"island\":\"望安\",\"lat\":23.3617,\"lng\":119.497,\"name\":\"望安鄉衛生所\"},{\"droneServable\":true,\"id\":\"N11\",\"island\":\"吉貝\",\"lat\":23.7407,\"lng\":119.6138,\"name\":\"吉貝衛生所\"},{\"droneServable\":true,\"id\":\"N12\",\"island\":\"本島\",\"lat\":23.5748,\"lng\":119.5833,\"name\":\"澎湖科技大學\"},{\"droneServable\":true,\"id\":\"N13\",\"island\":\"七美\",\"lat\":23.2067,\"lng\":119.4245,\"name\":\"七美鄉公所\"},{\"droneServable\":true,\"id\":\"N14\",\"island\":\"望安\",\"lat\":23.3576,\"lng\":119.5002,\"name\":\"望安鄉公所\"},{\"droneServable\":true,\"id\":\"N15\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所\"},{\"droneServable\":false,\"id\":\"depot\",\"island\":\"本島\",\"lat\":23.5678,\"lng\":119.5672,\"name\":\"馬公模擬收貨冷庫\"},{\"droneServable\":false,\"id\":\"magong-clinic\",\"island\":\"本島\",\"lat\":23.5718,\"lng\":119.578,\"name\":\"馬公市第一衛生所（示意）\"},{\"droneServable\":true,\"id\":\"magong-transfer\",\"island\":\"本島\",\"lat\":23.5627434,\"lng\":119.5649863,\"name\":\"馬公模擬轉運點（岸上道路）\"},{\"droneServable\":false,\"id\":\"qimei-clinic\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所（模擬配送點）\"},{\"droneServable\":true,\"id\":\"qimei-transfer\",\"island\":\"七美\",\"lat\":23.1959649,\"lng\":119.4187413,\"name\":\"七美模擬轉運點（岸上道路）\"}],\"orders\":[{\"deadlineMin\":660,\"destinationNodeId\":\"magong-clinic\",\"doses\":80,\"id\":\"ORD-MAGONG\",\"label\":\"馬公市第一衛生所\",\"priority\":\"routine\",\"receivingWindow\":[480,780]},{\"deadlineMin\":570,\"destinationNodeId\":\"qimei-clinic\",\"doses\":40,\"id\":\"ORD-QIMEI\",\"label\":\"七美鄉衛生所\",\"priority\":\"island\",\"receivingWindow\":[510,840]}],\"perDose\":{\"massKg\":0.03,\"volumeL\":0.04},\"risk\":{\"events\":[],\"safetyLimit\":1,\"windMultiplier\":1},\"routeHints\":[{\"arriveMin\":437.60014627125554,\"delayMin\":0,\"departMin\":437,\"droneId\":\"D-01\",\"earliestRequestMin\":437,\"from\":\"depot\",\"rationale_zh\":\"建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"magong-clinic\",\"waits\":[]},{\"arriveMin\":468.37522990876164,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-01\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"qimei-clinic\",\"waits\":[]}],\"startMin\":360,\"stock\":{\"availableAtMin\":420,\"doses\":200,\"id\":\"MOCK-BATCH-0113\",\"initialTemperatureC\":4.4,\"label\":\"模擬冷鏈疫苗批次\",\"nodeId\":\"depot\",\"quantity\":200,\"releaseMin\":420,\"source\":\"臺灣本島供應（上游情境）\",\"upstreamHistory\":[{\"celsius\":4.2,\"timeMin\":360},{\"celsius\":4.3,\"timeMin\":390},{\"celsius\":4.4,\"timeMin\":420}]},\"vehicles\":[{\"baseNodeId\":\"magong-transfer\",\"capacityKg\":3,\"capacityL\":5,\"energyWh\":1600,\"id\":\"D-01\",\"label\":\"D-01 七美配送無人機\",\"profile\":{\"handlingW\":8,\"idleW\":3,\"movingW\":25,\"travelWhPerKm\":12},\"reserveWh\":160,\"type\":\"drone\"},{\"baseNodeId\":\"depot\",\"capacityKg\":20,\"capacityL\":30,\"energyWh\":8000,\"id\":\"V-01\",\"label\":\"V-01 馬公配送車\",\"profile\":{\"handlingW\":35,\"idleW\":18,\"movingW\":65,\"travelWhPerKm\":85},\"reserveWh\":500,\"type\":\"van\"},{\"baseNodeId\":\"qimei-clinic\",\"capacityKg\":8,\"capacityL\":12,\"energyWh\":3500,\"id\":\"V-02\",\"label\":\"V-02 七美接駁車\",\"profile\":{\"handlingW\":30,\"idleW\":14,\"movingW\":55,\"travelWhPerKm\":90},\"reserveWh\":300,\"type\":\"van\"}],\"weatherContext\":{\"baseWindMs\":10.9,\"date\":\"2027-01-13\",\"label\":\"冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）\",\"season\":\"12–2 月冬季東北季風\",\"windFromDeg\":25,\"windHeightM\":10},\"weatherTimeline\":{\"baked\":[{\"ampMs\":5,\"fromH\":15,\"kind\":\"baked-surge\",\"label_zh\":\"基準強風\",\"rampH\":2,\"toH\":18}],\"userEvents\":[],\"windMultiplier\":1}}"
+        }
+      ]
+    },
+    "response": "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-transfer\",\"departAfterMin\":475},{\"vehicleId\":\"D-01\",\"from\":\"magong-transfer\",\"to\":\"qimei-clinic\",\"departAfterMin\":490}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"優先配送七美：疫苗先由冷藏車保冷，07:55 後送往無人機基地交接，無人機 08:10 後直飛 qimei-clinic，縮短到貨後等待收貨時窗的時間。馬公訂單由 V-01 空車返回冷庫取貨後配送；D-01 完成七美配送後嘗試返航，能源須連同返航及待機耗用計算。\"}",
+    "replies": [
+      "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-transfer\",\"departAfterMin\":475},{\"vehicleId\":\"D-01\",\"from\":\"magong-transfer\",\"to\":\"qimei-clinic\",\"departAfterMin\":490}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"優先配送七美：疫苗先由冷藏車保冷，07:55 後送往無人機基地交接，無人機 08:10 後直飛 qimei-clinic，縮短到貨後等待收貨時窗的時間。馬公訂單由 V-01 空車返回冷庫取貨後配送；D-01 完成七美配送後嘗試返航，能源須連同返航及待機耗用計算。\"}"
+    ],
+    "repairs": 0,
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "recordedAt": "2026-10-05T03:40:38.119Z"
+  },
+  "ops-replay-v1-13793497138be99d": {
+    "request": {
+      "kind": "schedule",
+      "inputs": {
+        "nodes": [
+          {
+            "id": "N01",
+            "name": "澎湖機場",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5686,
+            "lng": 119.6294
+          },
+          {
+            "id": "N02",
+            "name": "七美機場",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.213,
+            "lng": 119.4176
+          },
+          {
+            "id": "N03",
+            "name": "望安機場",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3691,
+            "lng": 119.5035
+          },
+          {
+            "id": "N04",
+            "name": "馬公碼頭",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5626,
+            "lng": 119.5647
+          },
+          {
+            "id": "N05",
+            "name": "南滬港",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1946,
+            "lng": 119.419
+          },
+          {
+            "id": "N06",
+            "name": "望安碼頭",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.362,
+            "lng": 119.5082
+          },
+          {
+            "id": "N07",
+            "name": "赤崁漁港",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.6666,
+            "lng": 119.6039
+          },
+          {
+            "id": "N08",
+            "name": "虎井碼頭",
+            "island": "虎井",
+            "droneServable": true,
+            "lat": 23.4878,
+            "lng": 119.5141
+          },
+          {
+            "id": "N09",
+            "name": "衛福部澎湖醫院",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5642,
+            "lng": 119.5659
+          },
+          {
+            "id": "N10",
+            "name": "望安鄉衛生所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3617,
+            "lng": 119.497
+          },
+          {
+            "id": "N11",
+            "name": "吉貝衛生所",
+            "island": "吉貝",
+            "droneServable": true,
+            "lat": 23.7407,
+            "lng": 119.6138
+          },
+          {
+            "id": "N12",
+            "name": "澎湖科技大學",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5748,
+            "lng": 119.5833
+          },
+          {
+            "id": "N13",
+            "name": "七美鄉公所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2067,
+            "lng": 119.4245
+          },
+          {
+            "id": "N14",
+            "name": "望安鄉公所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3576,
+            "lng": 119.5002
+          },
+          {
+            "id": "N15",
+            "name": "七美鄉衛生所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "depot",
+            "name": "馬公模擬收貨冷庫",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5678,
+            "lng": 119.5672
+          },
+          {
+            "id": "magong-clinic",
+            "name": "馬公市第一衛生所（示意）",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5718,
+            "lng": 119.578
+          },
+          {
+            "id": "magong-transfer",
+            "name": "馬公模擬轉運點（岸上道路）",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5627434,
+            "lng": 119.5649863
+          },
+          {
+            "id": "qimei-clinic",
+            "name": "七美鄉衛生所（模擬配送點）",
+            "island": "七美",
+            "droneServable": false,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "qimei-transfer",
+            "name": "七美模擬轉運點（岸上道路）",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1959649,
+            "lng": 119.4187413
+          }
+        ],
+        "orders": [
+          {
+            "id": "ORD-JIBEI",
+            "label": "吉貝衛生所",
+            "destinationNodeId": "N11",
+            "doses": 30,
+            "deadlineMin": 690,
+            "receivingWindow": [
+              480,
+              690
+            ],
+            "priority": "urgent"
+          },
+          {
+            "id": "ORD-MAGONG",
+            "label": "馬公市第一衛生所",
+            "destinationNodeId": "magong-clinic",
+            "doses": 80,
+            "deadlineMin": 660,
+            "receivingWindow": [
+              480,
+              780
+            ],
+            "priority": "routine"
+          },
+          {
+            "id": "ORD-QIMEI",
+            "label": "七美鄉衛生所",
+            "destinationNodeId": "qimei-clinic",
+            "doses": 40,
+            "deadlineMin": 570,
+            "receivingWindow": [
+              510,
+              840
+            ],
+            "priority": "island"
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "D-01",
+            "label": "D-01 七美配送無人機",
+            "type": "drone",
+            "baseNodeId": "magong-transfer",
+            "energyWh": 1600,
+            "reserveWh": 160,
+            "capacityKg": 3,
+            "capacityL": 5,
+            "profile": {
+              "idleW": 3,
+              "handlingW": 8,
+              "movingW": 25,
+              "travelWhPerKm": 12
+            }
+          },
+          {
+            "id": "V-01",
+            "label": "V-01 馬公配送車",
+            "type": "van",
+            "baseNodeId": "depot",
+            "energyWh": 8000,
+            "reserveWh": 500,
+            "capacityKg": 20,
+            "capacityL": 30,
+            "profile": {
+              "idleW": 18,
+              "handlingW": 35,
+              "movingW": 65,
+              "travelWhPerKm": 85
+            }
+          },
+          {
+            "id": "V-02",
+            "label": "V-02 七美接駁車",
+            "type": "van",
+            "baseNodeId": "qimei-clinic",
+            "energyWh": 3500,
+            "reserveWh": 300,
+            "capacityKg": 8,
+            "capacityL": 12,
+            "profile": {
+              "idleW": 14,
+              "handlingW": 30,
+              "movingW": 55,
+              "travelWhPerKm": 90
+            }
+          }
+        ],
+        "stock": {
+          "id": "MOCK-BATCH-0113",
+          "label": "模擬冷鏈疫苗批次",
+          "source": "臺灣本島供應（上游情境）",
+          "quantity": 200,
+          "availableAtMin": 420,
+          "initialTemperatureC": 4.4,
+          "upstreamHistory": [
+            {
+              "timeMin": 360,
+              "celsius": 4.2
+            },
+            {
+              "timeMin": 390,
+              "celsius": 4.3
+            },
+            {
+              "timeMin": 420,
+              "celsius": 4.4
+            }
+          ],
+          "nodeId": "depot",
+          "doses": 200,
+          "releaseMin": 420
+        },
+        "perDose": {
+          "massKg": 0.03,
+          "volumeL": 0.04
+        },
+        "startMin": 360,
+        "endMin": 1080,
+        "durationsMin": {
+          "packQimei": 12,
+          "packMagong": 10,
+          "loadQimei": 8,
+          "loadMagong": 7,
+          "handoverOrigin": 6,
+          "handoverQimei": 8,
+          "receiveQimei": 10,
+          "receiveMagong": 10
+        },
+        "risk": {
+          "windMultiplier": 1,
+          "events": [
+            {
+              "kind": "gust",
+              "nodeId": "qimei-transfer",
+              "radiusKm": 1,
+              "fromH": 7,
+              "toH": 10,
+              "multiplier": 1.25
+            }
+          ],
+          "safetyLimit": 1
+        },
+        "weatherTimeline": {
+          "baked": [
+            {
+              "kind": "baked-surge",
+              "fromH": 15,
+              "toH": 18,
+              "ampMs": 5,
+              "rampH": 2,
+              "label_zh": "基準強風"
+            }
+          ],
+          "windMultiplier": 1,
+          "userEvents": [
+            {
+              "kind": "gust",
+              "nodeId": "qimei-transfer",
+              "radiusKm": 1,
+              "fromH": 7,
+              "toH": 10,
+              "multiplier": 1.25
+            }
+          ]
+        },
+        "weatherContext": {
+          "label": "冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）",
+          "date": "2027-01-13",
+          "baseWindMs": 10.9,
+          "windFromDeg": 25,
+          "windHeightM": 10,
+          "season": "12–2 月冬季東北季風"
+        },
+        "routeHints": [
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "N11",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 469.34999567739845,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:49 抵達吉貝衛生所。全程最大單格風險 0.99（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "magong-clinic",
+            "earliestRequestMin": 437,
+            "status": "ok",
+            "departMin": 437,
+            "arriveMin": 437.60014627125554,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "qimei-clinic",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 468.37522990876164,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。"
+          }
+        ],
+        "droneCapabilities": [
+          {
+            "id": "D-01",
+            "enduranceMin": 106,
+            "cruiseKph": 100.08,
+            "initialEnergyWh": 1600,
+            "reserveWh": 160,
+            "usableEnergyWh": 1440,
+            "travelWhPerKm": 12,
+            "idleW": 3,
+            "handlingW": 8,
+            "movingW": 25
+          }
+        ]
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是澎湖疫苗配送排程助理。只回覆 JSON 物件，不要宣稱通過驗證；數位孿生引擎會獨立驗證。\n格式：{\"assignments\":[{\"orderId\":\"訂單ID\",\"legs\":[{\"vehicleId\":\"運具ID\",\"from\":\"節點ID\",\"to\":\"節點ID\",\"departAfterMin\":540}]}],\"notes_zh\":\"簡短繁體中文說明\"}。departAfterMin 可省略。\n每個訂單恰好一次，一段只承載一筆訂單；第一段從 stock.nodeId 出發，後段從前段終點交接，末段抵達目的地。\n引擎依 assignments 順序排程，遵守批次放行、打包、裝載、交接、收貨、車輛空車調度與可用時間。\n配送車只能同島道路；無人機可以直接飛到節點表中的任何節點，包含衛生所、冷庫，droneServable 是建議轉運屬性，不是禁飛限制。末段可直接飛到訂單 destinationNodeId，省去接駁與交接。\nN15 與 qimei-clinic 是不同節點；訂單若目的地是 qimei-clinic，飛到 N15 後仍須補一段到 qimei-clinic，或直接飛到 qimei-clinic。\n無人機使用安全航線、單段 enduranceMin 續航與風險門檻，最後嘗試返航。droneCapabilities 給出各機可用 energyWh-reserveWh、每公里 travelWhPerKm 與待機/移動功率；空機調度也耗能源，不能只算載貨航段。\n必須守期限、收貨時窗、全程 2–8°C、保留電量、質量及體積容量與庫存；允許 departAfterMin 等待風險回落。\ndepartAfterMin 是該航段最早可出發的當日分鐘（09:00=540、10:30=630），引擎會在此前完成裝載/交接；不是飛行分鐘數。可讓貨件留在冷庫或冷藏車等風險回落，再交給無人機，避免在被動保冷箱內長時間等待。\n風險 danger=(風速/12)^2；windMultiplier 與 gust 乘數會疊加，nofly 的時間與半徑內禁止飛行。時鐘使用當日分鐘。\nweatherTimeline 包含基準風場強風時段及增量與使用者事件；使用者陣風結束不代表基準風險已回落。routeHints 是放行及打包裝載後，由同一航線規劃器選出的安全直飛時間（搜尋範圍受當日及規劃 horizon 限制），未計空機調度、共用運具、能源或冷鏈，不能當成方案通過證明；延後 departAfterMin 可能錯過強風前的可飛窗口。\nweatherContext 的日期與風速來自冬季統計校準的合成情境，非單日實測；基準風向北北東–東北、10 m 風速。午後增強設定幅度見 weatherTimeline.ampMs；兩端漸變在三小時脈衝內重疊，實際峰值增量為設定幅度的 75%。依實際 weatherTimeline、routeHints 與引擎判定。\n若無可行方案，可以在 notes_zh 明說不可行，指出不足的具體資源及可解決方法，例如新增哪個基地的無人機、增加多少能源、延後到何時；仍給最合理的完整指派供引擎判定，不能虛構已有運具或通過結果。"
+        },
+        {
+          "role": "user",
+          "content": "{\"droneCapabilities\":[{\"cruiseKph\":100.08,\"enduranceMin\":106,\"handlingW\":8,\"id\":\"D-01\",\"idleW\":3,\"initialEnergyWh\":1600,\"movingW\":25,\"reserveWh\":160,\"travelWhPerKm\":12,\"usableEnergyWh\":1440}],\"durationsMin\":{\"handoverOrigin\":6,\"handoverQimei\":8,\"loadMagong\":7,\"loadQimei\":8,\"packMagong\":10,\"packQimei\":12,\"receiveMagong\":10,\"receiveQimei\":10},\"endMin\":1080,\"nodes\":[{\"droneServable\":true,\"id\":\"N01\",\"island\":\"本島\",\"lat\":23.5686,\"lng\":119.6294,\"name\":\"澎湖機場\"},{\"droneServable\":true,\"id\":\"N02\",\"island\":\"七美\",\"lat\":23.213,\"lng\":119.4176,\"name\":\"七美機場\"},{\"droneServable\":true,\"id\":\"N03\",\"island\":\"望安\",\"lat\":23.3691,\"lng\":119.5035,\"name\":\"望安機場\"},{\"droneServable\":true,\"id\":\"N04\",\"island\":\"本島\",\"lat\":23.5626,\"lng\":119.5647,\"name\":\"馬公碼頭\"},{\"droneServable\":true,\"id\":\"N05\",\"island\":\"七美\",\"lat\":23.1946,\"lng\":119.419,\"name\":\"南滬港\"},{\"droneServable\":true,\"id\":\"N06\",\"island\":\"望安\",\"lat\":23.362,\"lng\":119.5082,\"name\":\"望安碼頭\"},{\"droneServable\":true,\"id\":\"N07\",\"island\":\"本島\",\"lat\":23.6666,\"lng\":119.6039,\"name\":\"赤崁漁港\"},{\"droneServable\":true,\"id\":\"N08\",\"island\":\"虎井\",\"lat\":23.4878,\"lng\":119.5141,\"name\":\"虎井碼頭\"},{\"droneServable\":true,\"id\":\"N09\",\"island\":\"本島\",\"lat\":23.5642,\"lng\":119.5659,\"name\":\"衛福部澎湖醫院\"},{\"droneServable\":true,\"id\":\"N10\",\"island\":\"望安\",\"lat\":23.3617,\"lng\":119.497,\"name\":\"望安鄉衛生所\"},{\"droneServable\":true,\"id\":\"N11\",\"island\":\"吉貝\",\"lat\":23.7407,\"lng\":119.6138,\"name\":\"吉貝衛生所\"},{\"droneServable\":true,\"id\":\"N12\",\"island\":\"本島\",\"lat\":23.5748,\"lng\":119.5833,\"name\":\"澎湖科技大學\"},{\"droneServable\":true,\"id\":\"N13\",\"island\":\"七美\",\"lat\":23.2067,\"lng\":119.4245,\"name\":\"七美鄉公所\"},{\"droneServable\":true,\"id\":\"N14\",\"island\":\"望安\",\"lat\":23.3576,\"lng\":119.5002,\"name\":\"望安鄉公所\"},{\"droneServable\":true,\"id\":\"N15\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所\"},{\"droneServable\":false,\"id\":\"depot\",\"island\":\"本島\",\"lat\":23.5678,\"lng\":119.5672,\"name\":\"馬公模擬收貨冷庫\"},{\"droneServable\":false,\"id\":\"magong-clinic\",\"island\":\"本島\",\"lat\":23.5718,\"lng\":119.578,\"name\":\"馬公市第一衛生所（示意）\"},{\"droneServable\":true,\"id\":\"magong-transfer\",\"island\":\"本島\",\"lat\":23.5627434,\"lng\":119.5649863,\"name\":\"馬公模擬轉運點（岸上道路）\"},{\"droneServable\":false,\"id\":\"qimei-clinic\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所（模擬配送點）\"},{\"droneServable\":true,\"id\":\"qimei-transfer\",\"island\":\"七美\",\"lat\":23.1959649,\"lng\":119.4187413,\"name\":\"七美模擬轉運點（岸上道路）\"}],\"orders\":[{\"deadlineMin\":690,\"destinationNodeId\":\"N11\",\"doses\":30,\"id\":\"ORD-JIBEI\",\"label\":\"吉貝衛生所\",\"priority\":\"urgent\",\"receivingWindow\":[480,690]},{\"deadlineMin\":660,\"destinationNodeId\":\"magong-clinic\",\"doses\":80,\"id\":\"ORD-MAGONG\",\"label\":\"馬公市第一衛生所\",\"priority\":\"routine\",\"receivingWindow\":[480,780]},{\"deadlineMin\":570,\"destinationNodeId\":\"qimei-clinic\",\"doses\":40,\"id\":\"ORD-QIMEI\",\"label\":\"七美鄉衛生所\",\"priority\":\"island\",\"receivingWindow\":[510,840]}],\"perDose\":{\"massKg\":0.03,\"volumeL\":0.04},\"risk\":{\"events\":[{\"fromH\":7,\"kind\":\"gust\",\"multiplier\":1.25,\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"toH\":10}],\"safetyLimit\":1,\"windMultiplier\":1},\"routeHints\":[{\"arriveMin\":469.34999567739845,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-01\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:49 抵達吉貝衛生所。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"N11\",\"waits\":[]},{\"arriveMin\":437.60014627125554,\"delayMin\":0,\"departMin\":437,\"droneId\":\"D-01\",\"earliestRequestMin\":437,\"from\":\"depot\",\"rationale_zh\":\"建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"magong-clinic\",\"waits\":[]},{\"arriveMin\":468.37522990876164,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-01\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"qimei-clinic\",\"waits\":[]}],\"startMin\":360,\"stock\":{\"availableAtMin\":420,\"doses\":200,\"id\":\"MOCK-BATCH-0113\",\"initialTemperatureC\":4.4,\"label\":\"模擬冷鏈疫苗批次\",\"nodeId\":\"depot\",\"quantity\":200,\"releaseMin\":420,\"source\":\"臺灣本島供應（上游情境）\",\"upstreamHistory\":[{\"celsius\":4.2,\"timeMin\":360},{\"celsius\":4.3,\"timeMin\":390},{\"celsius\":4.4,\"timeMin\":420}]},\"vehicles\":[{\"baseNodeId\":\"magong-transfer\",\"capacityKg\":3,\"capacityL\":5,\"energyWh\":1600,\"id\":\"D-01\",\"label\":\"D-01 七美配送無人機\",\"profile\":{\"handlingW\":8,\"idleW\":3,\"movingW\":25,\"travelWhPerKm\":12},\"reserveWh\":160,\"type\":\"drone\"},{\"baseNodeId\":\"depot\",\"capacityKg\":20,\"capacityL\":30,\"energyWh\":8000,\"id\":\"V-01\",\"label\":\"V-01 馬公配送車\",\"profile\":{\"handlingW\":35,\"idleW\":18,\"movingW\":65,\"travelWhPerKm\":85},\"reserveWh\":500,\"type\":\"van\"},{\"baseNodeId\":\"qimei-clinic\",\"capacityKg\":8,\"capacityL\":12,\"energyWh\":3500,\"id\":\"V-02\",\"label\":\"V-02 七美接駁車\",\"profile\":{\"handlingW\":30,\"idleW\":14,\"movingW\":55,\"travelWhPerKm\":90},\"reserveWh\":300,\"type\":\"van\"}],\"weatherContext\":{\"baseWindMs\":10.9,\"date\":\"2027-01-13\",\"label\":\"冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）\",\"season\":\"12–2 月冬季東北季風\",\"windFromDeg\":25,\"windHeightM\":10},\"weatherTimeline\":{\"baked\":[{\"ampMs\":5,\"fromH\":15,\"kind\":\"baked-surge\",\"label_zh\":\"基準強風\",\"rampH\":2,\"toH\":18}],\"userEvents\":[{\"fromH\":7,\"kind\":\"gust\",\"multiplier\":1.25,\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"toH\":10}],\"windMultiplier\":1}}"
+        }
+      ]
+    },
+    "response": "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"D-01\",\"from\":\"depot\",\"to\":\"N02\"},{\"vehicleId\":\"V-02\",\"from\":\"N02\",\"to\":\"qimei-clinic\"}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]},{\"orderId\":\"ORD-JIBEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"N07\"},{\"vehicleId\":\"D-01\",\"from\":\"N07\",\"to\":\"N11\"}]}],\"notes_zh\":\"七美改在N02交接給冷藏車V-02，由其送到qimei-clinic並等待收貨時窗，使D-01完成交接後即可調度，減少在七美等待收貨的時間。V-01先完成馬公，再將吉貝貨件送至N07保冷候運，避免未完成的跨島訂單占住馬公配送車。現有單機的北返安全航線及剩餘能源仍是限制；若提前交接後仍無法接運，需新增N07基地無人機承擔吉貝配送，並為D-01安排七美補能以支應安全返航。\"}",
+    "replies": [
+      "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"D-01\",\"from\":\"depot\",\"to\":\"qimei-clinic\"}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]},{\"orderId\":\"ORD-JIBEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"N07\"},{\"vehicleId\":\"D-01\",\"from\":\"N07\",\"to\":\"N11\"}]}],\"notes_zh\":\"優先直飛七美配送點；馬公以冷藏車配送，吉貝貨件以冷藏車送至赤崁，等待無人機接運。現有單機完成兩島配送、空機調度及返航的能源不足：即使按直線距離估算，總航程也超過可用電量所能支應的120公里，安全繞行與待機另耗電。建議新增N07基地無人機分送吉貝；以上仍提供完整候選指派供引擎判定。\"}",
+      "{\"assignments\":[{\"orderId\":\"ORD-JIBEI\",\"legs\":[{\"vehicleId\":\"D-01\",\"from\":\"depot\",\"to\":\"N11\"}]},{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-transfer\"},{\"vehicleId\":\"D-01\",\"from\":\"magong-transfer\",\"to\":\"qimei-clinic\"}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"改為先直飛吉貝，再空機南返馬公轉運點；七美貨件由冷藏車送到轉運點並保冷等待交接，接著直飛qimei-clinic，避免七美配送後的北上調度。馬公訂單最後由冷藏車配送。現有單機含最終返航仍有能源不足：直線總航程約125公里，僅航程耗能約1500Wh，超過1440Wh可用能源約60Wh，尚未計安全繞行、待機與操作耗能。完整候選指派如上；若返航必須保留160Wh，需補足上述能源及額外耗能，或新增馬公转運點基地無人機分送七美。\"}",
+      "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"D-01\",\"from\":\"depot\",\"to\":\"N02\"},{\"vehicleId\":\"V-02\",\"from\":\"N02\",\"to\":\"qimei-clinic\"}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]},{\"orderId\":\"ORD-JIBEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"N07\"},{\"vehicleId\":\"D-01\",\"from\":\"N07\",\"to\":\"N11\"}]}],\"notes_zh\":\"七美改在N02交接給冷藏車V-02，由其送到qimei-clinic並等待收貨時窗，使D-01完成交接後即可調度，減少在七美等待收貨的時間。V-01先完成馬公，再將吉貝貨件送至N07保冷候運，避免未完成的跨島訂單占住馬公配送車。現有單機的北返安全航線及剩餘能源仍是限制；若提前交接後仍無法接運，需新增N07基地無人機承擔吉貝配送，並為D-01安排七美補能以支應安全返航。\"}"
+    ],
+    "repairs": 2,
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "recordedAt": "2026-10-05T03:40:38.119Z"
+  },
+  "ops-replay-v1-9f38c52c922c84a8": {
+    "request": {
+      "kind": "schedule",
+      "inputs": {
+        "nodes": [
+          {
+            "id": "N01",
+            "name": "澎湖機場",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5686,
+            "lng": 119.6294
+          },
+          {
+            "id": "N02",
+            "name": "七美機場",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.213,
+            "lng": 119.4176
+          },
+          {
+            "id": "N03",
+            "name": "望安機場",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3691,
+            "lng": 119.5035
+          },
+          {
+            "id": "N04",
+            "name": "馬公碼頭",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5626,
+            "lng": 119.5647
+          },
+          {
+            "id": "N05",
+            "name": "南滬港",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1946,
+            "lng": 119.419
+          },
+          {
+            "id": "N06",
+            "name": "望安碼頭",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.362,
+            "lng": 119.5082
+          },
+          {
+            "id": "N07",
+            "name": "赤崁漁港",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.6666,
+            "lng": 119.6039
+          },
+          {
+            "id": "N08",
+            "name": "虎井碼頭",
+            "island": "虎井",
+            "droneServable": true,
+            "lat": 23.4878,
+            "lng": 119.5141
+          },
+          {
+            "id": "N09",
+            "name": "衛福部澎湖醫院",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5642,
+            "lng": 119.5659
+          },
+          {
+            "id": "N10",
+            "name": "望安鄉衛生所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3617,
+            "lng": 119.497
+          },
+          {
+            "id": "N11",
+            "name": "吉貝衛生所",
+            "island": "吉貝",
+            "droneServable": true,
+            "lat": 23.7407,
+            "lng": 119.6138
+          },
+          {
+            "id": "N12",
+            "name": "澎湖科技大學",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5748,
+            "lng": 119.5833
+          },
+          {
+            "id": "N13",
+            "name": "七美鄉公所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2067,
+            "lng": 119.4245
+          },
+          {
+            "id": "N14",
+            "name": "望安鄉公所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3576,
+            "lng": 119.5002
+          },
+          {
+            "id": "N15",
+            "name": "七美鄉衛生所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "depot",
+            "name": "馬公模擬收貨冷庫",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5678,
+            "lng": 119.5672
+          },
+          {
+            "id": "magong-clinic",
+            "name": "馬公市第一衛生所（示意）",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5718,
+            "lng": 119.578
+          },
+          {
+            "id": "magong-transfer",
+            "name": "馬公模擬轉運點（岸上道路）",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5627434,
+            "lng": 119.5649863
+          },
+          {
+            "id": "qimei-clinic",
+            "name": "七美鄉衛生所（模擬配送點）",
+            "island": "七美",
+            "droneServable": false,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "qimei-transfer",
+            "name": "七美模擬轉運點（岸上道路）",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1959649,
+            "lng": 119.4187413
+          }
+        ],
+        "orders": [
+          {
+            "id": "ORD-JIBEI",
+            "label": "吉貝衛生所",
+            "destinationNodeId": "N11",
+            "doses": 30,
+            "deadlineMin": 690,
+            "receivingWindow": [
+              480,
+              690
+            ],
+            "priority": "urgent"
+          },
+          {
+            "id": "ORD-MAGONG",
+            "label": "馬公市第一衛生所",
+            "destinationNodeId": "magong-clinic",
+            "doses": 80,
+            "deadlineMin": 660,
+            "receivingWindow": [
+              480,
+              780
+            ],
+            "priority": "routine"
+          },
+          {
+            "id": "ORD-QIMEI",
+            "label": "七美鄉衛生所",
+            "destinationNodeId": "qimei-clinic",
+            "doses": 40,
+            "deadlineMin": 570,
+            "receivingWindow": [
+              510,
+              840
+            ],
+            "priority": "island"
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "D-01",
+            "label": "D-01 七美配送無人機",
+            "type": "drone",
+            "baseNodeId": "magong-transfer",
+            "energyWh": 1600,
+            "reserveWh": 160,
+            "capacityKg": 3,
+            "capacityL": 5,
+            "profile": {
+              "idleW": 3,
+              "handlingW": 8,
+              "movingW": 25,
+              "travelWhPerKm": 12
+            }
+          },
+          {
+            "id": "D-02",
+            "label": "D-02 無人機",
+            "type": "drone",
+            "baseNodeId": "magong-transfer",
+            "energyWh": 1600,
+            "reserveWh": 160,
+            "capacityKg": 3,
+            "capacityL": 5,
+            "profile": {
+              "idleW": 3,
+              "handlingW": 8,
+              "movingW": 25,
+              "travelWhPerKm": 12
+            }
+          },
+          {
+            "id": "V-01",
+            "label": "V-01 馬公配送車",
+            "type": "van",
+            "baseNodeId": "depot",
+            "energyWh": 8000,
+            "reserveWh": 500,
+            "capacityKg": 20,
+            "capacityL": 30,
+            "profile": {
+              "idleW": 18,
+              "handlingW": 35,
+              "movingW": 65,
+              "travelWhPerKm": 85
+            }
+          },
+          {
+            "id": "V-02",
+            "label": "V-02 七美接駁車",
+            "type": "van",
+            "baseNodeId": "qimei-clinic",
+            "energyWh": 3500,
+            "reserveWh": 300,
+            "capacityKg": 8,
+            "capacityL": 12,
+            "profile": {
+              "idleW": 14,
+              "handlingW": 30,
+              "movingW": 55,
+              "travelWhPerKm": 90
+            }
+          }
+        ],
+        "stock": {
+          "id": "MOCK-BATCH-0113",
+          "label": "模擬冷鏈疫苗批次",
+          "source": "臺灣本島供應（上游情境）",
+          "quantity": 200,
+          "availableAtMin": 420,
+          "initialTemperatureC": 4.4,
+          "upstreamHistory": [
+            {
+              "timeMin": 360,
+              "celsius": 4.2
+            },
+            {
+              "timeMin": 390,
+              "celsius": 4.3
+            },
+            {
+              "timeMin": 420,
+              "celsius": 4.4
+            }
+          ],
+          "nodeId": "depot",
+          "doses": 200,
+          "releaseMin": 420
+        },
+        "perDose": {
+          "massKg": 0.03,
+          "volumeL": 0.04
+        },
+        "startMin": 360,
+        "endMin": 1080,
+        "durationsMin": {
+          "packQimei": 12,
+          "packMagong": 10,
+          "loadQimei": 8,
+          "loadMagong": 7,
+          "handoverOrigin": 6,
+          "handoverQimei": 8,
+          "receiveQimei": 10,
+          "receiveMagong": 10
+        },
+        "risk": {
+          "windMultiplier": 1,
+          "events": [
+            {
+              "kind": "gust",
+              "nodeId": "qimei-transfer",
+              "radiusKm": 1,
+              "fromH": 7,
+              "toH": 10,
+              "multiplier": 1.25
+            }
+          ],
+          "safetyLimit": 1
+        },
+        "weatherTimeline": {
+          "baked": [
+            {
+              "kind": "baked-surge",
+              "fromH": 15,
+              "toH": 18,
+              "ampMs": 5,
+              "rampH": 2,
+              "label_zh": "基準強風"
+            }
+          ],
+          "windMultiplier": 1,
+          "userEvents": [
+            {
+              "kind": "gust",
+              "nodeId": "qimei-transfer",
+              "radiusKm": 1,
+              "fromH": 7,
+              "toH": 10,
+              "multiplier": 1.25
+            }
+          ]
+        },
+        "weatherContext": {
+          "label": "冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）",
+          "date": "2027-01-13",
+          "baseWindMs": 10.9,
+          "windFromDeg": 25,
+          "windHeightM": 10,
+          "season": "12–2 月冬季東北季風"
+        },
+        "routeHints": [
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "N11",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 469.34999567739845,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:49 抵達吉貝衛生所。全程最大單格風險 0.99（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "magong-clinic",
+            "earliestRequestMin": 437,
+            "status": "ok",
+            "departMin": 437,
+            "arriveMin": 437.60014627125554,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "qimei-clinic",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 468.37522990876164,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-02",
+            "from": "depot",
+            "to": "N11",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 469.34999567739845,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:49 抵達吉貝衛生所。全程最大單格風險 0.99（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-02",
+            "from": "depot",
+            "to": "magong-clinic",
+            "earliestRequestMin": 437,
+            "status": "ok",
+            "departMin": 437,
+            "arriveMin": 437.60014627125554,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-02",
+            "from": "depot",
+            "to": "qimei-clinic",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 468.37522990876164,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。"
+          }
+        ],
+        "droneCapabilities": [
+          {
+            "id": "D-01",
+            "enduranceMin": 106,
+            "cruiseKph": 100.08,
+            "initialEnergyWh": 1600,
+            "reserveWh": 160,
+            "usableEnergyWh": 1440,
+            "travelWhPerKm": 12,
+            "idleW": 3,
+            "handlingW": 8,
+            "movingW": 25
+          },
+          {
+            "id": "D-02",
+            "enduranceMin": 106,
+            "cruiseKph": 100.08,
+            "initialEnergyWh": 1600,
+            "reserveWh": 160,
+            "usableEnergyWh": 1440,
+            "travelWhPerKm": 12,
+            "idleW": 3,
+            "handlingW": 8,
+            "movingW": 25
+          }
+        ]
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是澎湖疫苗配送排程助理。只回覆 JSON 物件，不要宣稱通過驗證；數位孿生引擎會獨立驗證。\n格式：{\"assignments\":[{\"orderId\":\"訂單ID\",\"legs\":[{\"vehicleId\":\"運具ID\",\"from\":\"節點ID\",\"to\":\"節點ID\",\"departAfterMin\":540}]}],\"notes_zh\":\"簡短繁體中文說明\"}。departAfterMin 可省略。\n每個訂單恰好一次，一段只承載一筆訂單；第一段從 stock.nodeId 出發，後段從前段終點交接，末段抵達目的地。\n引擎依 assignments 順序排程，遵守批次放行、打包、裝載、交接、收貨、車輛空車調度與可用時間。\n配送車只能同島道路；無人機可以直接飛到節點表中的任何節點，包含衛生所、冷庫，droneServable 是建議轉運屬性，不是禁飛限制。末段可直接飛到訂單 destinationNodeId，省去接駁與交接。\nN15 與 qimei-clinic 是不同節點；訂單若目的地是 qimei-clinic，飛到 N15 後仍須補一段到 qimei-clinic，或直接飛到 qimei-clinic。\n無人機使用安全航線、單段 enduranceMin 續航與風險門檻，最後嘗試返航。droneCapabilities 給出各機可用 energyWh-reserveWh、每公里 travelWhPerKm 與待機/移動功率；空機調度也耗能源，不能只算載貨航段。\n必須守期限、收貨時窗、全程 2–8°C、保留電量、質量及體積容量與庫存；允許 departAfterMin 等待風險回落。\ndepartAfterMin 是該航段最早可出發的當日分鐘（09:00=540、10:30=630），引擎會在此前完成裝載/交接；不是飛行分鐘數。可讓貨件留在冷庫或冷藏車等風險回落，再交給無人機，避免在被動保冷箱內長時間等待。\n風險 danger=(風速/12)^2；windMultiplier 與 gust 乘數會疊加，nofly 的時間與半徑內禁止飛行。時鐘使用當日分鐘。\nweatherTimeline 包含基準風場強風時段及增量與使用者事件；使用者陣風結束不代表基準風險已回落。routeHints 是放行及打包裝載後，由同一航線規劃器選出的安全直飛時間（搜尋範圍受當日及規劃 horizon 限制），未計空機調度、共用運具、能源或冷鏈，不能當成方案通過證明；延後 departAfterMin 可能錯過強風前的可飛窗口。\nweatherContext 的日期與風速來自冬季統計校準的合成情境，非單日實測；基準風向北北東–東北、10 m 風速。午後增強設定幅度見 weatherTimeline.ampMs；兩端漸變在三小時脈衝內重疊，實際峰值增量為設定幅度的 75%。依實際 weatherTimeline、routeHints 與引擎判定。\n若無可行方案，可以在 notes_zh 明說不可行，指出不足的具體資源及可解決方法，例如新增哪個基地的無人機、增加多少能源、延後到何時；仍給最合理的完整指派供引擎判定，不能虛構已有運具或通過結果。"
+        },
+        {
+          "role": "user",
+          "content": "{\"droneCapabilities\":[{\"cruiseKph\":100.08,\"enduranceMin\":106,\"handlingW\":8,\"id\":\"D-01\",\"idleW\":3,\"initialEnergyWh\":1600,\"movingW\":25,\"reserveWh\":160,\"travelWhPerKm\":12,\"usableEnergyWh\":1440},{\"cruiseKph\":100.08,\"enduranceMin\":106,\"handlingW\":8,\"id\":\"D-02\",\"idleW\":3,\"initialEnergyWh\":1600,\"movingW\":25,\"reserveWh\":160,\"travelWhPerKm\":12,\"usableEnergyWh\":1440}],\"durationsMin\":{\"handoverOrigin\":6,\"handoverQimei\":8,\"loadMagong\":7,\"loadQimei\":8,\"packMagong\":10,\"packQimei\":12,\"receiveMagong\":10,\"receiveQimei\":10},\"endMin\":1080,\"nodes\":[{\"droneServable\":true,\"id\":\"N01\",\"island\":\"本島\",\"lat\":23.5686,\"lng\":119.6294,\"name\":\"澎湖機場\"},{\"droneServable\":true,\"id\":\"N02\",\"island\":\"七美\",\"lat\":23.213,\"lng\":119.4176,\"name\":\"七美機場\"},{\"droneServable\":true,\"id\":\"N03\",\"island\":\"望安\",\"lat\":23.3691,\"lng\":119.5035,\"name\":\"望安機場\"},{\"droneServable\":true,\"id\":\"N04\",\"island\":\"本島\",\"lat\":23.5626,\"lng\":119.5647,\"name\":\"馬公碼頭\"},{\"droneServable\":true,\"id\":\"N05\",\"island\":\"七美\",\"lat\":23.1946,\"lng\":119.419,\"name\":\"南滬港\"},{\"droneServable\":true,\"id\":\"N06\",\"island\":\"望安\",\"lat\":23.362,\"lng\":119.5082,\"name\":\"望安碼頭\"},{\"droneServable\":true,\"id\":\"N07\",\"island\":\"本島\",\"lat\":23.6666,\"lng\":119.6039,\"name\":\"赤崁漁港\"},{\"droneServable\":true,\"id\":\"N08\",\"island\":\"虎井\",\"lat\":23.4878,\"lng\":119.5141,\"name\":\"虎井碼頭\"},{\"droneServable\":true,\"id\":\"N09\",\"island\":\"本島\",\"lat\":23.5642,\"lng\":119.5659,\"name\":\"衛福部澎湖醫院\"},{\"droneServable\":true,\"id\":\"N10\",\"island\":\"望安\",\"lat\":23.3617,\"lng\":119.497,\"name\":\"望安鄉衛生所\"},{\"droneServable\":true,\"id\":\"N11\",\"island\":\"吉貝\",\"lat\":23.7407,\"lng\":119.6138,\"name\":\"吉貝衛生所\"},{\"droneServable\":true,\"id\":\"N12\",\"island\":\"本島\",\"lat\":23.5748,\"lng\":119.5833,\"name\":\"澎湖科技大學\"},{\"droneServable\":true,\"id\":\"N13\",\"island\":\"七美\",\"lat\":23.2067,\"lng\":119.4245,\"name\":\"七美鄉公所\"},{\"droneServable\":true,\"id\":\"N14\",\"island\":\"望安\",\"lat\":23.3576,\"lng\":119.5002,\"name\":\"望安鄉公所\"},{\"droneServable\":true,\"id\":\"N15\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所\"},{\"droneServable\":false,\"id\":\"depot\",\"island\":\"本島\",\"lat\":23.5678,\"lng\":119.5672,\"name\":\"馬公模擬收貨冷庫\"},{\"droneServable\":false,\"id\":\"magong-clinic\",\"island\":\"本島\",\"lat\":23.5718,\"lng\":119.578,\"name\":\"馬公市第一衛生所（示意）\"},{\"droneServable\":true,\"id\":\"magong-transfer\",\"island\":\"本島\",\"lat\":23.5627434,\"lng\":119.5649863,\"name\":\"馬公模擬轉運點（岸上道路）\"},{\"droneServable\":false,\"id\":\"qimei-clinic\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所（模擬配送點）\"},{\"droneServable\":true,\"id\":\"qimei-transfer\",\"island\":\"七美\",\"lat\":23.1959649,\"lng\":119.4187413,\"name\":\"七美模擬轉運點（岸上道路）\"}],\"orders\":[{\"deadlineMin\":690,\"destinationNodeId\":\"N11\",\"doses\":30,\"id\":\"ORD-JIBEI\",\"label\":\"吉貝衛生所\",\"priority\":\"urgent\",\"receivingWindow\":[480,690]},{\"deadlineMin\":660,\"destinationNodeId\":\"magong-clinic\",\"doses\":80,\"id\":\"ORD-MAGONG\",\"label\":\"馬公市第一衛生所\",\"priority\":\"routine\",\"receivingWindow\":[480,780]},{\"deadlineMin\":570,\"destinationNodeId\":\"qimei-clinic\",\"doses\":40,\"id\":\"ORD-QIMEI\",\"label\":\"七美鄉衛生所\",\"priority\":\"island\",\"receivingWindow\":[510,840]}],\"perDose\":{\"massKg\":0.03,\"volumeL\":0.04},\"risk\":{\"events\":[{\"fromH\":7,\"kind\":\"gust\",\"multiplier\":1.25,\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"toH\":10}],\"safetyLimit\":1,\"windMultiplier\":1},\"routeHints\":[{\"arriveMin\":469.34999567739845,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-01\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:49 抵達吉貝衛生所。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"N11\",\"waits\":[]},{\"arriveMin\":437.60014627125554,\"delayMin\":0,\"departMin\":437,\"droneId\":\"D-01\",\"earliestRequestMin\":437,\"from\":\"depot\",\"rationale_zh\":\"建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"magong-clinic\",\"waits\":[]},{\"arriveMin\":468.37522990876164,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-01\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"qimei-clinic\",\"waits\":[]},{\"arriveMin\":469.34999567739845,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-02\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:49 抵達吉貝衛生所。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"N11\",\"waits\":[]},{\"arriveMin\":437.60014627125554,\"delayMin\":0,\"departMin\":437,\"droneId\":\"D-02\",\"earliestRequestMin\":437,\"from\":\"depot\",\"rationale_zh\":\"建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"magong-clinic\",\"waits\":[]},{\"arriveMin\":468.37522990876164,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-02\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"qimei-clinic\",\"waits\":[]}],\"startMin\":360,\"stock\":{\"availableAtMin\":420,\"doses\":200,\"id\":\"MOCK-BATCH-0113\",\"initialTemperatureC\":4.4,\"label\":\"模擬冷鏈疫苗批次\",\"nodeId\":\"depot\",\"quantity\":200,\"releaseMin\":420,\"source\":\"臺灣本島供應（上游情境）\",\"upstreamHistory\":[{\"celsius\":4.2,\"timeMin\":360},{\"celsius\":4.3,\"timeMin\":390},{\"celsius\":4.4,\"timeMin\":420}]},\"vehicles\":[{\"baseNodeId\":\"magong-transfer\",\"capacityKg\":3,\"capacityL\":5,\"energyWh\":1600,\"id\":\"D-01\",\"label\":\"D-01 七美配送無人機\",\"profile\":{\"handlingW\":8,\"idleW\":3,\"movingW\":25,\"travelWhPerKm\":12},\"reserveWh\":160,\"type\":\"drone\"},{\"baseNodeId\":\"magong-transfer\",\"capacityKg\":3,\"capacityL\":5,\"energyWh\":1600,\"id\":\"D-02\",\"label\":\"D-02 無人機\",\"profile\":{\"handlingW\":8,\"idleW\":3,\"movingW\":25,\"travelWhPerKm\":12},\"reserveWh\":160,\"type\":\"drone\"},{\"baseNodeId\":\"depot\",\"capacityKg\":20,\"capacityL\":30,\"energyWh\":8000,\"id\":\"V-01\",\"label\":\"V-01 馬公配送車\",\"profile\":{\"handlingW\":35,\"idleW\":18,\"movingW\":65,\"travelWhPerKm\":85},\"reserveWh\":500,\"type\":\"van\"},{\"baseNodeId\":\"qimei-clinic\",\"capacityKg\":8,\"capacityL\":12,\"energyWh\":3500,\"id\":\"V-02\",\"label\":\"V-02 七美接駁車\",\"profile\":{\"handlingW\":30,\"idleW\":14,\"movingW\":55,\"travelWhPerKm\":90},\"reserveWh\":300,\"type\":\"van\"}],\"weatherContext\":{\"baseWindMs\":10.9,\"date\":\"2027-01-13\",\"label\":\"冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）\",\"season\":\"12–2 月冬季東北季風\",\"windFromDeg\":25,\"windHeightM\":10},\"weatherTimeline\":{\"baked\":[{\"ampMs\":5,\"fromH\":15,\"kind\":\"baked-surge\",\"label_zh\":\"基準強風\",\"rampH\":2,\"toH\":18}],\"userEvents\":[{\"fromH\":7,\"kind\":\"gust\",\"multiplier\":1.25,\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"toH\":10}],\"windMultiplier\":1}}"
+        }
+      ]
+    },
+    "response": "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-transfer\",\"departAfterMin\":480},{\"vehicleId\":\"D-01\",\"from\":\"magong-transfer\",\"to\":\"qimei-clinic\"}]},{\"orderId\":\"ORD-JIBEI\",\"legs\":[{\"vehicleId\":\"D-02\",\"from\":\"depot\",\"to\":\"N11\"}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"七美貨件先在冷藏車內等待，08:00後送至馬公轉運點，再交由D-01直飛qimei-clinic，以減少提前抵達收貨時窗所需的被動保冷等待。吉貝由D-02自冷庫直飛；馬公由V-01完成轉運任務後配送。共使用150劑。\"}",
+    "replies": [
+      "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-transfer\",\"departAfterMin\":480},{\"vehicleId\":\"D-01\",\"from\":\"magong-transfer\",\"to\":\"qimei-clinic\"}]},{\"orderId\":\"ORD-JIBEI\",\"legs\":[{\"vehicleId\":\"D-02\",\"from\":\"depot\",\"to\":\"N11\"}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"七美貨件先在冷藏車內等待，08:00後送至馬公轉運點，再交由D-01直飛qimei-clinic，以減少提前抵達收貨時窗所需的被動保冷等待。吉貝由D-02自冷庫直飛；馬公由V-01完成轉運任務後配送。共使用150劑。\"}"
+    ],
+    "repairs": 0,
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "recordedAt": "2026-10-05T03:40:38.119Z"
+  },
+  "ops-replay-v1-fbd8fb49ccb63030": {
+    "request": {
+      "kind": "risk",
+      "inputs": {
+        "promptVersion": 3,
+        "sentence": "假設七美轉運點上午七點到十點，半徑 1 公里風速 ×1.25",
+        "risk": {
+          "windMultiplier": 1,
+          "events": [],
+          "safetyLimit": 1
+        },
+        "nodes": [
+          {
+            "id": "N01",
+            "name": "澎湖機場",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5686,
+            "lng": 119.6294
+          },
+          {
+            "id": "N02",
+            "name": "七美機場",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.213,
+            "lng": 119.4176
+          },
+          {
+            "id": "N03",
+            "name": "望安機場",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3691,
+            "lng": 119.5035
+          },
+          {
+            "id": "N04",
+            "name": "馬公碼頭",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5626,
+            "lng": 119.5647
+          },
+          {
+            "id": "N05",
+            "name": "南滬港",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1946,
+            "lng": 119.419
+          },
+          {
+            "id": "N06",
+            "name": "望安碼頭",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.362,
+            "lng": 119.5082
+          },
+          {
+            "id": "N07",
+            "name": "赤崁漁港",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.6666,
+            "lng": 119.6039
+          },
+          {
+            "id": "N08",
+            "name": "虎井碼頭",
+            "island": "虎井",
+            "droneServable": true,
+            "lat": 23.4878,
+            "lng": 119.5141
+          },
+          {
+            "id": "N09",
+            "name": "衛福部澎湖醫院",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5642,
+            "lng": 119.5659
+          },
+          {
+            "id": "N10",
+            "name": "望安鄉衛生所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3617,
+            "lng": 119.497
+          },
+          {
+            "id": "N11",
+            "name": "吉貝衛生所",
+            "island": "吉貝",
+            "droneServable": true,
+            "lat": 23.7407,
+            "lng": 119.6138
+          },
+          {
+            "id": "N12",
+            "name": "澎湖科技大學",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5748,
+            "lng": 119.5833
+          },
+          {
+            "id": "N13",
+            "name": "七美鄉公所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2067,
+            "lng": 119.4245
+          },
+          {
+            "id": "N14",
+            "name": "望安鄉公所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3576,
+            "lng": 119.5002
+          },
+          {
+            "id": "N15",
+            "name": "七美鄉衛生所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "depot",
+            "name": "馬公模擬收貨冷庫",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5678,
+            "lng": 119.5672
+          },
+          {
+            "id": "magong-clinic",
+            "name": "馬公市第一衛生所（示意）",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5718,
+            "lng": 119.578
+          },
+          {
+            "id": "magong-transfer",
+            "name": "馬公模擬轉運點（岸上道路）",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5627434,
+            "lng": 119.5649863
+          },
+          {
+            "id": "qimei-clinic",
+            "name": "七美鄉衛生所（模擬配送點）",
+            "island": "七美",
+            "droneServable": false,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "qimei-transfer",
+            "name": "七美模擬轉運點（岸上道路）",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1959649,
+            "lng": 119.4187413
+          }
+        ]
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "將使用者描述轉成澎湖風險情境修正。只回覆 JSON，不得宣稱驗證成功。\n格式：{\"patch\":{\"windMultiplier\":1,\"events\":[{\"kind\":\"gust\",\"nodeId\":\"有效節點ID\",\"radiusKm\":1,\"fromH\":7,\"toH\":10,\"multiplier\":1.25}],\"safetyLimit\":1},\"summary_zh\":\"一行繁體中文摘要\"}。\npatch 可以省略未改欄位；events 如果提供會取代全部事件，因此保留既有且未要求移除的事件。\nwindMultiplier 限 0.5–2，safetyLimit 限 0.6–1.2。kind 只允許 gust 或 nofly；半徑正數公里，0≤fromH<toH≤24；gust multiplier 必須正數，nofly 不含 multiplier。\n只使用節點表 ID；上午九點到十二點是 9–12，上午九點到十點半是 9–10.5；七美泛指事件使用 qimei-transfer 作為中心。使用者指定半徑時以指定數值為準，未指定則半徑 1 公里。未指定強度的局部強風可用 multiplier 1.25，避免超出觀測範圍。\n本例為 2027-01-13 冬季東北季風合成情境，10 m 基礎風速 10.9 m/s，15–18 時增強設定 +5 m/s；2 小時漸變重疊後，實際背景峰值增量為 +3.75 m/s。使用者事件是 what-if，非單日觀測；指定風速乘數時忠實採用。範例局部強風的強度須維持在 CODiS 七美逐時風速 p99 約 17.6 m/s 的觀測範圍內。"
+        },
+        {
+          "role": "user",
+          "content": "{\"nodes\":[{\"droneServable\":true,\"id\":\"N01\",\"island\":\"本島\",\"lat\":23.5686,\"lng\":119.6294,\"name\":\"澎湖機場\"},{\"droneServable\":true,\"id\":\"N02\",\"island\":\"七美\",\"lat\":23.213,\"lng\":119.4176,\"name\":\"七美機場\"},{\"droneServable\":true,\"id\":\"N03\",\"island\":\"望安\",\"lat\":23.3691,\"lng\":119.5035,\"name\":\"望安機場\"},{\"droneServable\":true,\"id\":\"N04\",\"island\":\"本島\",\"lat\":23.5626,\"lng\":119.5647,\"name\":\"馬公碼頭\"},{\"droneServable\":true,\"id\":\"N05\",\"island\":\"七美\",\"lat\":23.1946,\"lng\":119.419,\"name\":\"南滬港\"},{\"droneServable\":true,\"id\":\"N06\",\"island\":\"望安\",\"lat\":23.362,\"lng\":119.5082,\"name\":\"望安碼頭\"},{\"droneServable\":true,\"id\":\"N07\",\"island\":\"本島\",\"lat\":23.6666,\"lng\":119.6039,\"name\":\"赤崁漁港\"},{\"droneServable\":true,\"id\":\"N08\",\"island\":\"虎井\",\"lat\":23.4878,\"lng\":119.5141,\"name\":\"虎井碼頭\"},{\"droneServable\":true,\"id\":\"N09\",\"island\":\"本島\",\"lat\":23.5642,\"lng\":119.5659,\"name\":\"衛福部澎湖醫院\"},{\"droneServable\":true,\"id\":\"N10\",\"island\":\"望安\",\"lat\":23.3617,\"lng\":119.497,\"name\":\"望安鄉衛生所\"},{\"droneServable\":true,\"id\":\"N11\",\"island\":\"吉貝\",\"lat\":23.7407,\"lng\":119.6138,\"name\":\"吉貝衛生所\"},{\"droneServable\":true,\"id\":\"N12\",\"island\":\"本島\",\"lat\":23.5748,\"lng\":119.5833,\"name\":\"澎湖科技大學\"},{\"droneServable\":true,\"id\":\"N13\",\"island\":\"七美\",\"lat\":23.2067,\"lng\":119.4245,\"name\":\"七美鄉公所\"},{\"droneServable\":true,\"id\":\"N14\",\"island\":\"望安\",\"lat\":23.3576,\"lng\":119.5002,\"name\":\"望安鄉公所\"},{\"droneServable\":true,\"id\":\"N15\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所\"},{\"droneServable\":false,\"id\":\"depot\",\"island\":\"本島\",\"lat\":23.5678,\"lng\":119.5672,\"name\":\"馬公模擬收貨冷庫\"},{\"droneServable\":false,\"id\":\"magong-clinic\",\"island\":\"本島\",\"lat\":23.5718,\"lng\":119.578,\"name\":\"馬公市第一衛生所（示意）\"},{\"droneServable\":true,\"id\":\"magong-transfer\",\"island\":\"本島\",\"lat\":23.5627434,\"lng\":119.5649863,\"name\":\"馬公模擬轉運點（岸上道路）\"},{\"droneServable\":false,\"id\":\"qimei-clinic\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所（模擬配送點）\"},{\"droneServable\":true,\"id\":\"qimei-transfer\",\"island\":\"七美\",\"lat\":23.1959649,\"lng\":119.4187413,\"name\":\"七美模擬轉運點（岸上道路）\"}],\"promptVersion\":3,\"risk\":{\"events\":[],\"safetyLimit\":1,\"windMultiplier\":1},\"sentence\":\"假設七美轉運點上午七點到十點，半徑 1 公里風速 ×1.25\"}"
+        }
+      ]
+    },
+    "response": "{\"patch\":{\"events\":[{\"kind\":\"gust\",\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"fromH\":7,\"toH\":10,\"multiplier\":1.25}]},\"summary_zh\":\"假設七美轉運點上午七點至十點，半徑 1 公里內風速為背景風速的 1.25 倍。\"}",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "recordedAt": "2026-10-05T03:40:38.119Z"
+  },
+  "ops-replay-v1-c01b217f199ff665": {
+    "request": {
+      "kind": "schedule",
+      "inputs": {
+        "nodes": [
+          {
+            "id": "N01",
+            "name": "澎湖機場",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5686,
+            "lng": 119.6294
+          },
+          {
+            "id": "N02",
+            "name": "七美機場",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.213,
+            "lng": 119.4176
+          },
+          {
+            "id": "N03",
+            "name": "望安機場",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3691,
+            "lng": 119.5035
+          },
+          {
+            "id": "N04",
+            "name": "馬公碼頭",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5626,
+            "lng": 119.5647
+          },
+          {
+            "id": "N05",
+            "name": "南滬港",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1946,
+            "lng": 119.419
+          },
+          {
+            "id": "N06",
+            "name": "望安碼頭",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.362,
+            "lng": 119.5082
+          },
+          {
+            "id": "N07",
+            "name": "赤崁漁港",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.6666,
+            "lng": 119.6039
+          },
+          {
+            "id": "N08",
+            "name": "虎井碼頭",
+            "island": "虎井",
+            "droneServable": true,
+            "lat": 23.4878,
+            "lng": 119.5141
+          },
+          {
+            "id": "N09",
+            "name": "衛福部澎湖醫院",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5642,
+            "lng": 119.5659
+          },
+          {
+            "id": "N10",
+            "name": "望安鄉衛生所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3617,
+            "lng": 119.497
+          },
+          {
+            "id": "N11",
+            "name": "吉貝衛生所",
+            "island": "吉貝",
+            "droneServable": true,
+            "lat": 23.7407,
+            "lng": 119.6138
+          },
+          {
+            "id": "N12",
+            "name": "澎湖科技大學",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5748,
+            "lng": 119.5833
+          },
+          {
+            "id": "N13",
+            "name": "七美鄉公所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2067,
+            "lng": 119.4245
+          },
+          {
+            "id": "N14",
+            "name": "望安鄉公所",
+            "island": "望安",
+            "droneServable": true,
+            "lat": 23.3576,
+            "lng": 119.5002
+          },
+          {
+            "id": "N15",
+            "name": "七美鄉衛生所",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "depot",
+            "name": "馬公模擬收貨冷庫",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5678,
+            "lng": 119.5672
+          },
+          {
+            "id": "magong-clinic",
+            "name": "馬公市第一衛生所（示意）",
+            "island": "本島",
+            "droneServable": false,
+            "lat": 23.5718,
+            "lng": 119.578
+          },
+          {
+            "id": "magong-transfer",
+            "name": "馬公模擬轉運點（岸上道路）",
+            "island": "本島",
+            "droneServable": true,
+            "lat": 23.5627434,
+            "lng": 119.5649863
+          },
+          {
+            "id": "qimei-clinic",
+            "name": "七美鄉衛生所（模擬配送點）",
+            "island": "七美",
+            "droneServable": false,
+            "lat": 23.2041,
+            "lng": 119.4309
+          },
+          {
+            "id": "qimei-transfer",
+            "name": "七美模擬轉運點（岸上道路）",
+            "island": "七美",
+            "droneServable": true,
+            "lat": 23.1959649,
+            "lng": 119.4187413
+          }
+        ],
+        "orders": [
+          {
+            "id": "ORD-MAGONG",
+            "label": "馬公市第一衛生所",
+            "destinationNodeId": "magong-clinic",
+            "doses": 80,
+            "deadlineMin": 660,
+            "receivingWindow": [
+              480,
+              780
+            ],
+            "priority": "routine"
+          },
+          {
+            "id": "ORD-QIMEI",
+            "label": "七美鄉衛生所",
+            "destinationNodeId": "qimei-clinic",
+            "doses": 40,
+            "deadlineMin": 570,
+            "receivingWindow": [
+              510,
+              840
+            ],
+            "priority": "island"
+          }
+        ],
+        "vehicles": [
+          {
+            "id": "D-01",
+            "label": "D-01 七美配送無人機",
+            "type": "drone",
+            "baseNodeId": "magong-transfer",
+            "energyWh": 1600,
+            "reserveWh": 160,
+            "capacityKg": 3,
+            "capacityL": 5,
+            "profile": {
+              "idleW": 3,
+              "handlingW": 8,
+              "movingW": 25,
+              "travelWhPerKm": 12
+            }
+          },
+          {
+            "id": "V-01",
+            "label": "V-01 馬公配送車",
+            "type": "van",
+            "baseNodeId": "depot",
+            "energyWh": 8000,
+            "reserveWh": 500,
+            "capacityKg": 20,
+            "capacityL": 30,
+            "profile": {
+              "idleW": 18,
+              "handlingW": 35,
+              "movingW": 65,
+              "travelWhPerKm": 85
+            }
+          },
+          {
+            "id": "V-02",
+            "label": "V-02 七美接駁車",
+            "type": "van",
+            "baseNodeId": "qimei-clinic",
+            "energyWh": 3500,
+            "reserveWh": 300,
+            "capacityKg": 8,
+            "capacityL": 12,
+            "profile": {
+              "idleW": 14,
+              "handlingW": 30,
+              "movingW": 55,
+              "travelWhPerKm": 90
+            }
+          }
+        ],
+        "stock": {
+          "id": "MOCK-BATCH-0113",
+          "label": "模擬冷鏈疫苗批次",
+          "source": "臺灣本島供應（上游情境）",
+          "quantity": 200,
+          "availableAtMin": 420,
+          "initialTemperatureC": 4.4,
+          "upstreamHistory": [
+            {
+              "timeMin": 360,
+              "celsius": 4.2
+            },
+            {
+              "timeMin": 390,
+              "celsius": 4.3
+            },
+            {
+              "timeMin": 420,
+              "celsius": 4.4
+            }
+          ],
+          "nodeId": "depot",
+          "doses": 200,
+          "releaseMin": 420
+        },
+        "perDose": {
+          "massKg": 0.03,
+          "volumeL": 0.04
+        },
+        "startMin": 360,
+        "endMin": 1080,
+        "durationsMin": {
+          "packQimei": 12,
+          "packMagong": 10,
+          "loadQimei": 8,
+          "loadMagong": 7,
+          "handoverOrigin": 6,
+          "handoverQimei": 8,
+          "receiveQimei": 10,
+          "receiveMagong": 10
+        },
+        "risk": {
+          "windMultiplier": 1,
+          "events": [
+            {
+              "kind": "gust",
+              "nodeId": "qimei-transfer",
+              "radiusKm": 1,
+              "fromH": 7,
+              "toH": 10,
+              "multiplier": 1.25
+            }
+          ],
+          "safetyLimit": 1
+        },
+        "weatherTimeline": {
+          "baked": [
+            {
+              "kind": "baked-surge",
+              "fromH": 15,
+              "toH": 18,
+              "ampMs": 5,
+              "rampH": 2,
+              "label_zh": "基準強風"
+            }
+          ],
+          "windMultiplier": 1,
+          "userEvents": [
+            {
+              "kind": "gust",
+              "nodeId": "qimei-transfer",
+              "radiusKm": 1,
+              "fromH": 7,
+              "toH": 10,
+              "multiplier": 1.25
+            }
+          ]
+        },
+        "weatherContext": {
+          "label": "冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）",
+          "date": "2027-01-13",
+          "baseWindMs": 10.9,
+          "windFromDeg": 25,
+          "windHeightM": 10,
+          "season": "12–2 月冬季東北季風"
+        },
+        "routeHints": [
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "magong-clinic",
+            "earliestRequestMin": 437,
+            "status": "ok",
+            "departMin": 437,
+            "arriveMin": 437.60014627125554,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。"
+          },
+          {
+            "droneId": "D-01",
+            "from": "depot",
+            "to": "qimei-clinic",
+            "earliestRequestMin": 440,
+            "status": "ok",
+            "departMin": 440,
+            "arriveMin": 468.37522990876164,
+            "delayMin": 0,
+            "waits": [],
+            "rationale_zh": "建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。"
+          }
+        ],
+        "droneCapabilities": [
+          {
+            "id": "D-01",
+            "enduranceMin": 106,
+            "cruiseKph": 100.08,
+            "initialEnergyWh": 1600,
+            "reserveWh": 160,
+            "usableEnergyWh": 1440,
+            "travelWhPerKm": 12,
+            "idleW": 3,
+            "handlingW": 8,
+            "movingW": 25
+          }
+        ]
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "你是澎湖疫苗配送排程助理。只回覆 JSON 物件，不要宣稱通過驗證；數位孿生引擎會獨立驗證。\n格式：{\"assignments\":[{\"orderId\":\"訂單ID\",\"legs\":[{\"vehicleId\":\"運具ID\",\"from\":\"節點ID\",\"to\":\"節點ID\",\"departAfterMin\":540}]}],\"notes_zh\":\"簡短繁體中文說明\"}。departAfterMin 可省略。\n每個訂單恰好一次，一段只承載一筆訂單；第一段從 stock.nodeId 出發，後段從前段終點交接，末段抵達目的地。\n引擎依 assignments 順序排程，遵守批次放行、打包、裝載、交接、收貨、車輛空車調度與可用時間。\n配送車只能同島道路；無人機可以直接飛到節點表中的任何節點，包含衛生所、冷庫，droneServable 是建議轉運屬性，不是禁飛限制。末段可直接飛到訂單 destinationNodeId，省去接駁與交接。\nN15 與 qimei-clinic 是不同節點；訂單若目的地是 qimei-clinic，飛到 N15 後仍須補一段到 qimei-clinic，或直接飛到 qimei-clinic。\n無人機使用安全航線、單段 enduranceMin 續航與風險門檻，最後嘗試返航。droneCapabilities 給出各機可用 energyWh-reserveWh、每公里 travelWhPerKm 與待機/移動功率；空機調度也耗能源，不能只算載貨航段。\n必須守期限、收貨時窗、全程 2–8°C、保留電量、質量及體積容量與庫存；允許 departAfterMin 等待風險回落。\ndepartAfterMin 是該航段最早可出發的當日分鐘（09:00=540、10:30=630），引擎會在此前完成裝載/交接；不是飛行分鐘數。可讓貨件留在冷庫或冷藏車等風險回落，再交給無人機，避免在被動保冷箱內長時間等待。\n風險 danger=(風速/12)^2；windMultiplier 與 gust 乘數會疊加，nofly 的時間與半徑內禁止飛行。時鐘使用當日分鐘。\nweatherTimeline 包含基準風場強風時段及增量與使用者事件；使用者陣風結束不代表基準風險已回落。routeHints 是放行及打包裝載後，由同一航線規劃器選出的安全直飛時間（搜尋範圍受當日及規劃 horizon 限制），未計空機調度、共用運具、能源或冷鏈，不能當成方案通過證明；延後 departAfterMin 可能錯過強風前的可飛窗口。\nweatherContext 的日期與風速來自冬季統計校準的合成情境，非單日實測；基準風向北北東–東北、10 m 風速。午後增強設定幅度見 weatherTimeline.ampMs；兩端漸變在三小時脈衝內重疊，實際峰值增量為設定幅度的 75%。依實際 weatherTimeline、routeHints 與引擎判定。\n若無可行方案，可以在 notes_zh 明說不可行，指出不足的具體資源及可解決方法，例如新增哪個基地的無人機、增加多少能源、延後到何時；仍給最合理的完整指派供引擎判定，不能虛構已有運具或通過結果。"
+        },
+        {
+          "role": "user",
+          "content": "{\"droneCapabilities\":[{\"cruiseKph\":100.08,\"enduranceMin\":106,\"handlingW\":8,\"id\":\"D-01\",\"idleW\":3,\"initialEnergyWh\":1600,\"movingW\":25,\"reserveWh\":160,\"travelWhPerKm\":12,\"usableEnergyWh\":1440}],\"durationsMin\":{\"handoverOrigin\":6,\"handoverQimei\":8,\"loadMagong\":7,\"loadQimei\":8,\"packMagong\":10,\"packQimei\":12,\"receiveMagong\":10,\"receiveQimei\":10},\"endMin\":1080,\"nodes\":[{\"droneServable\":true,\"id\":\"N01\",\"island\":\"本島\",\"lat\":23.5686,\"lng\":119.6294,\"name\":\"澎湖機場\"},{\"droneServable\":true,\"id\":\"N02\",\"island\":\"七美\",\"lat\":23.213,\"lng\":119.4176,\"name\":\"七美機場\"},{\"droneServable\":true,\"id\":\"N03\",\"island\":\"望安\",\"lat\":23.3691,\"lng\":119.5035,\"name\":\"望安機場\"},{\"droneServable\":true,\"id\":\"N04\",\"island\":\"本島\",\"lat\":23.5626,\"lng\":119.5647,\"name\":\"馬公碼頭\"},{\"droneServable\":true,\"id\":\"N05\",\"island\":\"七美\",\"lat\":23.1946,\"lng\":119.419,\"name\":\"南滬港\"},{\"droneServable\":true,\"id\":\"N06\",\"island\":\"望安\",\"lat\":23.362,\"lng\":119.5082,\"name\":\"望安碼頭\"},{\"droneServable\":true,\"id\":\"N07\",\"island\":\"本島\",\"lat\":23.6666,\"lng\":119.6039,\"name\":\"赤崁漁港\"},{\"droneServable\":true,\"id\":\"N08\",\"island\":\"虎井\",\"lat\":23.4878,\"lng\":119.5141,\"name\":\"虎井碼頭\"},{\"droneServable\":true,\"id\":\"N09\",\"island\":\"本島\",\"lat\":23.5642,\"lng\":119.5659,\"name\":\"衛福部澎湖醫院\"},{\"droneServable\":true,\"id\":\"N10\",\"island\":\"望安\",\"lat\":23.3617,\"lng\":119.497,\"name\":\"望安鄉衛生所\"},{\"droneServable\":true,\"id\":\"N11\",\"island\":\"吉貝\",\"lat\":23.7407,\"lng\":119.6138,\"name\":\"吉貝衛生所\"},{\"droneServable\":true,\"id\":\"N12\",\"island\":\"本島\",\"lat\":23.5748,\"lng\":119.5833,\"name\":\"澎湖科技大學\"},{\"droneServable\":true,\"id\":\"N13\",\"island\":\"七美\",\"lat\":23.2067,\"lng\":119.4245,\"name\":\"七美鄉公所\"},{\"droneServable\":true,\"id\":\"N14\",\"island\":\"望安\",\"lat\":23.3576,\"lng\":119.5002,\"name\":\"望安鄉公所\"},{\"droneServable\":true,\"id\":\"N15\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所\"},{\"droneServable\":false,\"id\":\"depot\",\"island\":\"本島\",\"lat\":23.5678,\"lng\":119.5672,\"name\":\"馬公模擬收貨冷庫\"},{\"droneServable\":false,\"id\":\"magong-clinic\",\"island\":\"本島\",\"lat\":23.5718,\"lng\":119.578,\"name\":\"馬公市第一衛生所（示意）\"},{\"droneServable\":true,\"id\":\"magong-transfer\",\"island\":\"本島\",\"lat\":23.5627434,\"lng\":119.5649863,\"name\":\"馬公模擬轉運點（岸上道路）\"},{\"droneServable\":false,\"id\":\"qimei-clinic\",\"island\":\"七美\",\"lat\":23.2041,\"lng\":119.4309,\"name\":\"七美鄉衛生所（模擬配送點）\"},{\"droneServable\":true,\"id\":\"qimei-transfer\",\"island\":\"七美\",\"lat\":23.1959649,\"lng\":119.4187413,\"name\":\"七美模擬轉運點（岸上道路）\"}],\"orders\":[{\"deadlineMin\":660,\"destinationNodeId\":\"magong-clinic\",\"doses\":80,\"id\":\"ORD-MAGONG\",\"label\":\"馬公市第一衛生所\",\"priority\":\"routine\",\"receivingWindow\":[480,780]},{\"deadlineMin\":570,\"destinationNodeId\":\"qimei-clinic\",\"doses\":40,\"id\":\"ORD-QIMEI\",\"label\":\"七美鄉衛生所\",\"priority\":\"island\",\"receivingWindow\":[510,840]}],\"perDose\":{\"massKg\":0.03,\"volumeL\":0.04},\"risk\":{\"events\":[{\"fromH\":7,\"kind\":\"gust\",\"multiplier\":1.25,\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"toH\":10}],\"safetyLimit\":1,\"windMultiplier\":1},\"routeHints\":[{\"arriveMin\":437.60014627125554,\"delayMin\":0,\"departMin\":437,\"droneId\":\"D-01\",\"earliestRequestMin\":437,\"from\":\"depot\",\"rationale_zh\":\"建議 07:17 出發，預計 07:18 抵達馬公市第一衛生所（示意）。全程最大單格風險 0.78（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"magong-clinic\",\"waits\":[]},{\"arriveMin\":468.37522990876164,\"delayMin\":0,\"departMin\":440,\"droneId\":\"D-01\",\"earliestRequestMin\":440,\"from\":\"depot\",\"rationale_zh\":\"建議 07:20 出發，預計 07:48 抵達七美鄉衛生所（模擬配送點）。全程最大單格風險 0.99（安全門檻 1.0）。\",\"status\":\"ok\",\"to\":\"qimei-clinic\",\"waits\":[]}],\"startMin\":360,\"stock\":{\"availableAtMin\":420,\"doses\":200,\"id\":\"MOCK-BATCH-0113\",\"initialTemperatureC\":4.4,\"label\":\"模擬冷鏈疫苗批次\",\"nodeId\":\"depot\",\"quantity\":200,\"releaseMin\":420,\"source\":\"臺灣本島供應（上游情境）\",\"upstreamHistory\":[{\"celsius\":4.2,\"timeMin\":360},{\"celsius\":4.3,\"timeMin\":390},{\"celsius\":4.4,\"timeMin\":420}]},\"vehicles\":[{\"baseNodeId\":\"magong-transfer\",\"capacityKg\":3,\"capacityL\":5,\"energyWh\":1600,\"id\":\"D-01\",\"label\":\"D-01 七美配送無人機\",\"profile\":{\"handlingW\":8,\"idleW\":3,\"movingW\":25,\"travelWhPerKm\":12},\"reserveWh\":160,\"type\":\"drone\"},{\"baseNodeId\":\"depot\",\"capacityKg\":20,\"capacityL\":30,\"energyWh\":8000,\"id\":\"V-01\",\"label\":\"V-01 馬公配送車\",\"profile\":{\"handlingW\":35,\"idleW\":18,\"movingW\":65,\"travelWhPerKm\":85},\"reserveWh\":500,\"type\":\"van\"},{\"baseNodeId\":\"qimei-clinic\",\"capacityKg\":8,\"capacityL\":12,\"energyWh\":3500,\"id\":\"V-02\",\"label\":\"V-02 七美接駁車\",\"profile\":{\"handlingW\":30,\"idleW\":14,\"movingW\":55,\"travelWhPerKm\":90},\"reserveWh\":300,\"type\":\"van\"}],\"weatherContext\":{\"baseWindMs\":10.9,\"date\":\"2027-01-13\",\"label\":\"冬季東北季風日（依中央氣象署測站冬季統計校準的合成情境，非單日實測）\",\"season\":\"12–2 月冬季東北季風\",\"windFromDeg\":25,\"windHeightM\":10},\"weatherTimeline\":{\"baked\":[{\"ampMs\":5,\"fromH\":15,\"kind\":\"baked-surge\",\"label_zh\":\"基準強風\",\"rampH\":2,\"toH\":18}],\"userEvents\":[{\"fromH\":7,\"kind\":\"gust\",\"multiplier\":1.25,\"nodeId\":\"qimei-transfer\",\"radiusKm\":1,\"toH\":10}],\"windMultiplier\":1}}"
+        }
+      ]
+    },
+    "response": "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"D-01\",\"from\":\"depot\",\"to\":\"N15\",\"departAfterMin\":440},{\"vehicleId\":\"V-02\",\"from\":\"N15\",\"to\":\"qimei-clinic\",\"departAfterMin\":510}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"七美優先於07:20直飛N15，交接V-02後在冷藏車內等待，08:30起送至qimei-clinic收貨，減少被動保冷箱等待時間。馬公由V-01配送並配合08:00收貨時窗；D-01須保留空機調度及返航所需電量。\"}",
+    "replies": [
+      "{\"assignments\":[{\"orderId\":\"ORD-QIMEI\",\"legs\":[{\"vehicleId\":\"D-01\",\"from\":\"depot\",\"to\":\"N15\",\"departAfterMin\":440},{\"vehicleId\":\"V-02\",\"from\":\"N15\",\"to\":\"qimei-clinic\",\"departAfterMin\":510}]},{\"orderId\":\"ORD-MAGONG\",\"legs\":[{\"vehicleId\":\"V-01\",\"from\":\"depot\",\"to\":\"magong-clinic\"}]}],\"notes_zh\":\"七美優先於07:20直飛N15，交接V-02後在冷藏車內等待，08:30起送至qimei-clinic收貨，減少被動保冷箱等待時間。馬公由V-01配送並配合08:00收貨時窗；D-01須保留空機調度及返航所需電量。\"}"
+    ],
+    "repairs": 0,
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "recordedAt": "2026-10-05T03:40:38.119Z"
+  }
+}

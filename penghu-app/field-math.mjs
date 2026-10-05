@@ -1,4 +1,4 @@
-export const HATCH_MARGIN = 0.28;
+export const HATCH_MARGIN = 0.5;
 export const FIELD_CEILING_M = 120;
 export function cellStyle(danger, margin, land, dangerClamp, safetyLimit) {
   const blocked = !land && danger + margin > safetyLimit;

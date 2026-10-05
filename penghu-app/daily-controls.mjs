@@ -1,3 +1,4 @@
+import {aircraftReference} from './data-sources.mjs';
 import {minuteLabel} from './daily-panels.mjs';
 import {HATCH_MARGIN} from './field-math.mjs';
 
@@ -20,7 +21,8 @@ export function createCameraControls({run, store, actions, scenarioId = 'deliver
       overview.addEventListener('click', actions.overview);
       const label = node('label', '追蹤對象');
       const resource = node('select'); resource.setAttribute('aria-label', '追蹤對象');
-      for (const item of scenarioId === 'delivery' ? run.fixture.resources : []) {
+      const trackableResources = ['monitor', 'delivery'].includes(scenarioId) ? run.fixture.resources : [];
+      for (const item of trackableResources) {
         const option = node('option', item.label); option.value = item.id; resource.append(option);
       }
       label.append(resource);
@@ -62,7 +64,7 @@ export function createCameraControls({run, store, actions, scenarioId = 'deliver
   };
 }
 /** 風險場: the synthetic hazard display. Its legend starts open in the 風險場 check. */
-export function createHazardControls({store, actions, legendOpen = false}) {
+export function createHazardControls({store, actions, meta, fixture = {}, legendOpen = false, explanationCollapsed = false}) {
   return {
     id: 'hazardControls', title: '風險場', icon: '◐', defaultSize: {w: 4, h: 5},
     render(container) {
@@ -72,23 +74,71 @@ export function createHazardControls({store, actions, legendOpen = false}) {
       hazard.addEventListener('change', () => actions.setHazardVisible(hazard.checked));
       hazardLabel.append(hazard, node('span', '顯示風險場'));
       const fieldStatus = node('output'); fieldStatus.setAttribute('role', 'status'); fieldStatus.className = 'daily-field-status';
+      const explanation = node('section', null, 'daily-hazard-explanation');
+      const heading = node('div', null, 'daily-hazard-explanation-heading');
+      const toggle = node('button', '收合'); toggle.type = 'button';
+      const body = node('div', null, 'daily-hazard-explanation-body');
+      heading.append(node('strong', '這張圖在說什麼'), toggle);
+      const assumption = key => meta.assumptions.find(item => item.key === key)?.value;
+      const hourLabel = hour => minuteLabel(hour * 60);
+      const cellKm = (Math.sqrt(meta.cell_m[0] * meta.cell_m[1]) / 1000).toFixed(1).replace(/\.0$/, '');
+      const nearClosed = (meta.scenario?.flyable_percent ?? []).filter(item => item.percent <= 3);
+      const nearClosedWindow = nearClosed.length ? `${hourLabel(nearClosed[0].hour)}–${hourLabel(nearClosed.at(-1).hour)}` : '無近乎全面禁飛時段';
+      const lines = [
+        ['澎湖海面的無人機飛行風險地圖', `每格約 ${cellKm} 公里、每 ${meta.frame_minutes} 分鐘一張，涵蓋全天。`],
+        [`風險值 ≈（風速 ÷ ${assumption('u_ref_ms')} m/s）²`, `風速 ${assumption('u_ref_ms')} m/s 時為 1.0，另加上預報不確定度（越晚的時刻越不確定）。`],
+        ['顏色', '綠色低風險，黃、紅表示風險升高。風險＋不確定度超過安全門檻的海面以粉紅框標示為禁飛，航線規劃不會穿越。'],
+        ['斜線', `不確定度 > ${HATCH_MARGIN}，標示校準情境中邊際分布的較高部分；純顯示門檻，不改變禁飛判定。`],
+        ['今日情境', `北北東–東北風 ${assumption('base_wind_ms')} m/s（10 m），${hourLabel(assumption('surge_start_h'))} 起增強設定 +${assumption('surge_amp_ms')} m/s（漸變重疊後背景峰值增量 +${meta.scenario?.surge_peak_increment_ms ?? '未提供'} m/s）；約 ${nearClosedWindow} 海面幾乎全面禁飛（可飛格 ≤ 3%）；仍須逐條航線驗證。 [S1]`],
+        ['這天算典型嗎？', meta.scenario?.typicality_note ?? '冬季外海風速經常超過作業上限；冬季統計與 2027 年 2 月抗風測試目的見來源 [S1][S7]。'],
+        ...(meta.sources?.S16?.typicality_note ? [['ERA5 比對', meta.sources.S16.typicality_note]] : []),
+        ['參考機型', aircraftReference(meta, fixture).replace(/^參考機型：/, '')],
+        ['可調整', '在「風險情境」調整風速、強風區、禁飛區與安全門檻，會即時改變這張圖、航線試算與方案驗證。'],
+        ['資料來源', `${meta.scenario?.date ?? fixture.date ?? ''} ${meta.scenario?.label ?? ''}`],
+      ];
+      let colorLine;
+      for (const [title, value] of lines) {
+        const line = node('p'); line.append(node('strong', `${title}：`), document.createTextNode(value));
+        body.append(line); if (title === '顏色') colorLine = line;
+      }
+      let collapsed = explanationCollapsed;
+      const storageKey = 'penghu-hazard-explanation-collapsed-v2';
+      try { const saved = localStorage.getItem(storageKey); if (saved != null) collapsed = saved === 'true'; } catch {}
+      const paintExplanation = () => {
+        body.hidden = collapsed; toggle.textContent = collapsed ? '展開' : '收合';
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+      };
+      toggle.addEventListener('click', () => {
+        collapsed = !collapsed; paintExplanation();
+        try { localStorage.setItem(storageKey, String(collapsed)); } catch {}
+      });
+      paintExplanation(); explanation.append(heading, body);
+      const readout = node('output', null, 'daily-hazard-readout'); readout.setAttribute('aria-live', 'polite');
       const details = node('details', null, 'daily-hazard-legend-box'); details.open = legendOpen;
       details.append(node('summary', '圖例'));
       const legend = node('div', null, 'daily-hazard-legend');
       for (const [kind, caption] of [
         ['low', '0 低風險'], ['medium', '0.5'], ['high', '1.0'], ['very-high', '>1 高風險'],
         ['blocked', '粉紅邊界：危險＋邊際 > 1.0 禁飛'],
-        ['uncertain', `斜線：邊際 > ${HATCH_MARGIN}`], ['land', '淡藍：陸地／上限（透明 18%）'],
+        ['uncertain', `斜線：邊際 > ${HATCH_MARGIN}（較高部分，僅顯示）`], ['land', '淡藍：陸地／上限（透明 18%）'],
       ]) {
         const item = node('span', caption); item.dataset.kind = kind; legend.append(item);
       }
       details.append(legend);
-      root.append(hazardLabel, fieldStatus, details,
-        node('p', '風險場是合成示範資料，隨同一時間軸變化。今日配送使用已提供的模擬航線，尚未用此風險場重新規劃。', 'daily-control-note'));
+      const toolbar = node('div', null, 'daily-hazard-toolbar'); toolbar.append(hazardLabel, fieldStatus);
+      root.append(toolbar, explanation, details, readout);
       container.append(root);
       const stop = store.subscribe(state => {
         hazard.checked = state.hazardVisible;
         const field = state.fieldStatus;
+        const limit = field.safetyLimit ?? assumption('safety_limit');
+        colorLine.lastChild.textContent = `綠色低風險，黃、紅表示風險升高。風險＋不確定度超過安全門檻 ${Number(limit).toFixed(2)} 的海面以粉紅框標示為禁飛，航線規劃不會穿越。`;
+        legend.querySelector('[data-kind=blocked]').textContent = `粉紅邊界：風險＋不確定度 > ${Number(limit).toFixed(2)} 禁飛`;
+        legend.querySelector('[data-kind=uncertain]').textContent = `斜線：不確定度 > ${HATCH_MARGIN}（較高部分，僅顯示）`;
+        const available = state.hazardVisible && Number.isFinite(field.noFlyCells) && !field.loading && !field.error;
+        readout.textContent = available
+          ? `目前時刻 ${minuteLabel(field.timeMin)}：禁飛海面 ${field.noFlyCells} 格（約 ${(field.noFlyCells * field.cellAreaKm2).toFixed(0)} km²）· 最高風險 ${field.maxDanger.toFixed(2)}`
+          : `目前時刻 ${minuteLabel(state.snapshot.timeMin)}：${field.error ? '風險資料無法讀取' : !state.hazardVisible ? '風險場已隱藏（顯示後更新）' : '風險資料更新中'}`;
         fieldStatus.textContent = field.error ? `風險場：${field.error}` : !state.hazardVisible ? '風險場已隱藏' : field.loading ? '風險場載入中' : `風險場 ${minuteLabel(field.timeMin)} · ${field.noFlyCells ?? '—'} 格模型禁飛`;
         fieldStatus.dataset.state = field.error ? 'error' : field.loading ? 'loading' : 'ready';
       });

@@ -6,7 +6,7 @@ const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const positive = (value) => finite(value) && value > 0;
 const within = (value, low, high) => Math.max(low, Math.min(high, value));
 
-function distanceKm(a, b) {
+export function distanceKm(a, b) {
   const rad = Math.PI / 180;
   const dLat = (b.lat - a.lat) * rad;
   const dLng = (b.lng - a.lng) * rad;
@@ -14,7 +14,7 @@ function distanceKm(a, b) {
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
-function pathLengthKm(path) {
+export function pathLengthKm(path) {
   return path.slice(1).reduce((sum, point, index) => sum + distanceKm(path[index], point), 0);
 }
 
@@ -98,11 +98,11 @@ function validateFixture(fixture) {
   return { sites, resources, orders, routes };
 }
 
-function thermalAt(startC, profile, elapsedMin) {
+export function thermalAt(startC, profile, elapsedMin) {
   return profile.ambientC + (startC - profile.ambientC) * Math.exp(-elapsedMin / profile.tauMin);
 }
 
-function excursionInPhase(phase, elapsedMin, bounds) {
+export function excursionInPhase(phase, elapsedMin, bounds) {
   const duration = within(elapsedMin, 0, phase.endMin - phase.startMin);
   const breaks = [0, duration];
   for (const bound of bounds) {
@@ -122,7 +122,7 @@ function excursionInPhase(phase, elapsedMin, bounds) {
   return minutes;
 }
 
-function thermalStatsAt(phases, timeMin, bounds) {
+export function thermalStatsAt(phases, timeMin, bounds) {
   if (!phases.length || timeMin < phases[0].startMin) return { temperatureC: null, minTemperatureC: null, maxTemperatureC: null, excursionMinutes: 0 };
   let minTemperatureC = phases[0].startC;
   let maxTemperatureC = phases[0].startC;
@@ -140,7 +140,7 @@ function thermalStatsAt(phases, timeMin, bounds) {
   return { temperatureC, minTemperatureC, maxTemperatureC, excursionMinutes };
 }
 
-function energyAt(resource, activities, startMin, timeMin) {
+export function energyAt(resource, activities, startMin, timeMin) {
   const elapsed = Math.max(0, timeMin - startMin);
   const p = resource.mockProfile;
   let spentWh = elapsed * p.idleW / 60;
@@ -178,7 +178,7 @@ function resourceAt(run, resource, timeMin) {
   return { id: resource.id, label: resource.label, type: resource.type, status, position,
     siteId: movement ? null : (active?.siteId ?? siteId), energyWh,
     energyPercent: 100 * energyWh / resource.initialEnergyWh, reserveWh: resource.reserveWh,
-    orderIds: active?.orderIds ?? [], activity };
+    orderIds: active?.orderIds ?? (terminal ? run._terminalOrderIds?.[resource.id] : null) ?? [], activity };
 }
 
 export function snapshotAt(run, timeMin) {

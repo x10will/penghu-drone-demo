@@ -1,4 +1,8 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
+/** Display-only punctuation; the engine's reasons remain unchanged. */
+export function joinRiskReasons(reasons) {
+  return reasons.map(reason => reason.replace(/。+\s*$/u, '')).join('；');
+}
 const ORDER_STATUS = {
   'awaiting-supply': '等待批次／分配', packing: '包裝中', ready: '待裝運', loading: '裝載中',
   'in-transit': '運送中', handover: '交接中', receiving: '驗收中', delivered: '完成驗收',
@@ -9,11 +13,22 @@ const RESOURCE_STATUS = {
   receiving: '驗收中', parked: '停車', 'recovery-required': '待回收',
 };
 const resultStatus = status => status === 'delivered' ? '完成驗收' : '待專業評估';
-const resourceType = source => source.typeLabel ?? (source.type === 'drone' ? '無人機' : source.id === 'V-01' ? '配送車' : '接駁車');
+const resourceType = source => source.typeLabel ?? (source.type === 'drone' ? '無人機' : '配送車');
 const resourceStatus = current => RESOURCE_STATUS[current.status] ?? current.status;
 const resourceActivity = current => current.activity && current.activity !== resourceStatus(current) ? current.activity : '';
-const resourcePosition = (run, current) => current.siteId ? siteName(run.fixture, current.siteId) :
-  `${round(current.position.lat, 4)}, ${round(current.position.lng, 4)} · ${round(current.position.altitudeM, 0)} m`;
+export function resourcePosition(run, current, timeMin) {
+  if (current.siteId) return siteName(run.fixture, current.siteId);
+  const movement = run.movements.find(item => item.resourceId === current.id &&
+    item.startMin <= timeMin && timeMin < item.endMin);
+  if (movement) return `前往 ${siteName(run.fixture, movement.toSiteId)}`;
+  const position = current.position;
+  const nearest = position && run.fixture.sites.reduce((best, site) => {
+    const distance = (site.lat - position.lat) ** 2 +
+      ((site.lng - position.lng) * Math.cos(position.lat * Math.PI / 180)) ** 2;
+    return !best || distance < best.distance ? {site, distance} : best;
+  }, null);
+  return nearest ? siteName(run.fixture, nearest.site.id) : '位置待更新';
+}
 const round = (value, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '—';
 const text = (tag, className, value) => {
   const node = document.createElement(tag);
@@ -144,7 +159,7 @@ function makeOrderDetail(run, order) {
   };
 }
 
-function createPlanPanel({run, store, actions}) {
+function createPlanPanel({run, store, actions, adopted = run.id.startsWith('run-ops-')}) {
   return {
     id: 'dailyPlan', title: '今日配送計畫', icon: '▤', defaultSize: {w: 3, h: 7}, streams: [],
     render(container) {
@@ -154,10 +169,11 @@ function createPlanPanel({run, store, actions}) {
       title.append(text('strong', 'daily-pill', '模擬資料'), text('span', 'daily-run-id', `${run.fixture.date} · ${run.fixture.timezone}`));
       const now = text('output', 'daily-now', minuteLabel(run.startMin));
       mast.append(title, now);
-      const phase = text('p', 'daily-phase', '固定計畫 · 無人機交接優先');
+      const planLabel = adopted ? '採用方案' : '固定計畫 · 無人機交接優先';
+      const phase = text('p', 'daily-phase', planLabel);
       const stock = text('div', 'daily-metrics');
       const batch = makeMetric('到貨批次', `${run.fixture.batch.quantity} 劑`);
-      const allocated = makeMetric('兩筆訂單', `${run.fixture.orders.reduce((sum, item) => sum + item.quantity, 0)} 劑`);
+      const allocated = makeMetric(`${run.fixture.orders.length} 筆訂單`, `${run.fixture.orders.reduce((sum, item) => sum + item.quantity, 0)} 劑`);
       const remaining = makeMetric('當前可用', '—');
       stock.append(batch.box, allocated.box, remaining.box);
       const release = text('p', 'daily-release', `${run.fixture.batch.id} · ${minuteLabel(run.fixture.batch.availableAtMin)} 於模擬收貨冷庫放行`);
@@ -206,7 +222,9 @@ function createPlanPanel({run, store, actions}) {
       const notes = text('p', 'daily-summary-notes', run.summary.notes.join(' '));
       const summaryHint = text('p', 'daily-summary-hint', '尚未到日終。使用地圖播放列的「日終」查看日終結果。');
       const summaryBody = text('div', 'daily-summary-body');
-      summaryBody.append(summaryLedger, summaryOrders, summaryFleet, notes);
+      const summaryDetails = text('details', 'daily-summary-details');
+      summaryDetails.append(text('summary', '', '訂單與運具日終明細'), summaryOrders, summaryFleet, notes);
+      summaryBody.append(summaryLedger, summaryDetails);
       summary.append(summaryTitle, summaryHint, summaryBody);
 
       const inputs = text('details', 'daily-inputs');
@@ -219,7 +237,7 @@ function createPlanPanel({run, store, actions}) {
       inputsBody.append(assumptionList);
       inputsBody.append(text('p', '', run.fixture.profile.label));
       inputsBody.append(text('p', '', `模擬溫控界限 ${run.fixture.profile.temperatureBoundsC.join('–')} °C；圖表取樣每 ${run.fixture.profile.sampleEveryMin} 分鐘，超界時數由連續區間計算。`));
-      inputsBody.append(text('p', '', `路線：${run.fixture.routes.map(route => `${siteName(run.fixture, route.fromSiteId)} → ${siteName(run.fixture, route.toSiteId)} ${route.speedKph} km/h`).join('；')}`));
+      inputsBody.append(text('p', '', `路線：${run.fixture.routes.map(route => `${siteName(run.fixture, route.fromSiteId)} → ${siteName(run.fixture, route.toSiteId)} ${round(route.speedKph, 0)} km/h${route.mode === 'air' ? ' [S7]' : '（無參考，假設值）'}`).join('；')}`));
       const serviceNames = {packQimei:'七美包裝',packMagong:'馬公包裝',loadQimei:'七美訂單裝車',loadMagong:'馬公訂單裝車',handoverOrigin:'馬公交接',handoverQimei:'七美交接',receiveQimei:'七美驗收',receiveMagong:'馬公驗收'};
       inputsBody.append(text('p', '', `作業時間：${Object.entries(run.fixture.plan.durationsMin).map(([name, value]) => `${serviceNames[name] ?? name} ${value} 分`).join(' · ')}`));
       const modelInputs = text('details', 'daily-model-inputs');
@@ -235,7 +253,7 @@ function createPlanPanel({run, store, actions}) {
         const {snapshot, selectedOrderId, selectedEventId} = state;
         const atEnd = snapshot.timeMin >= run.endMin - 1e-7;
         set(now, minuteLabel(snapshot.timeMin));
-        set(phase, atEnd ? '18:00 日終 · 固定計畫' : `固定計畫 · 無人機交接優先 · ${snapshot.inventory.released ? '批次已放行' : '等待批次放行'}`);
+        set(phase, atEnd ? `18:00 日終 · ${planLabel}` : `${planLabel} · ${snapshot.inventory.released ? '批次已放行' : '等待批次放行'}`);
         set(remaining.output, `${snapshot.inventory.availableQuantity} 劑`);
         for (const [id, row] of orderButtons) {
           const current = snapshot.orders.find(item => item.id === id);
@@ -297,7 +315,7 @@ function createOrderPanel({run, store, actions}) {
   };
 }
 
-function createResourceStatusPanel({run, store, actions}) {
+function createResourceStatusPanel({run, store, actions, compactResources = false}) {
   return {
     id: 'resourceStatus', title: '運具狀態', icon: '▣', defaultSize: {w: 8, h: 4}, streams: [],
     render(container, ctx = {}) {
@@ -321,8 +339,9 @@ function createResourceStatusPanel({run, store, actions}) {
         list.append(button);
         return {source, button, status, energy, position};
       });
-      const detail = text('section', 'daily-resource-selected-detail');
-      const heading = text('h3', 'daily-resource-detail-heading');
+      const detail = text('details', 'daily-resource-selected-detail');
+      detail.open = !compactResources;
+      const heading = text('summary', 'daily-resource-detail-heading');
       const activity = text('p', 'daily-resource-activity');
       const facts = text('dl', 'daily-kv daily-resource-detail-facts');
       const cargo = makeLine('載運訂單');
@@ -349,7 +368,7 @@ function createResourceStatusPanel({run, store, actions}) {
           row.button.setAttribute('aria-pressed', String(row.source.id === selectedId));
           set(row.status, resourceStatus(current));
           set(row.energy, `${round(current.energyWh, 1)} Wh`);
-          set(row.position, resourcePosition(run, current));
+          set(row.position, resourcePosition(run, current, snapshot.timeMin));
           row.position.title = row.position.textContent;
         }
         const source = sources.find(item => item.id === selectedId);
@@ -359,8 +378,8 @@ function createResourceStatusPanel({run, store, actions}) {
         if (renderedId !== selectedId) {
           renderedId = selectedId;
           set(heading, `${source.label} · 詳情`);
-          set(capacity.output, `${round(source.capacityKg)} kg · ${round(source.capacityL)} L`);
-          set(standby.output, `${round(source.mockProfile.idleW, 0)} Wh/h`);
+          set(capacity.output, source.type === 'drone' ? `${round(source.capacityKg)} kg [S5] · ${run.fixture.aircraft?.payloadBox ?? '容積未公布（佔位值）'} [S5]` : `${round(source.capacityKg)} kg · ${round(source.capacityL)} L（無參考，假設值）`);
+          set(standby.output, `${round(source.mockProfile.idleW, 0)} Wh/h（無參考，假設值）`);
           set(reserve.output, `${round(source.reserveWh)} Wh`);
           schedule.replaceChildren();
           eventRows = run.events.filter(event => event.resourceIds.includes(source.id)).map(event => {

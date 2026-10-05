@@ -16,6 +16,8 @@
 .trial-controls{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
 .trial-controls button{min-height:34px;font-size:11px}
 .trial-result{display:grid;gap:10px}
+.trial-result-details:has(.trial-result:empty){display:none}
+.trial-result-details summary{cursor:pointer;font-size:11px}
 .trial-route{padding:10px;border:1px solid #365e66;border-radius:8px;background:#102e39}
 .trial-route h3{margin:0 0 8px;color:#e4fff9;font-size:13px}
 .trial-route h4{margin:12px 0 5px;color:#a7e8df;font-size:11px}
@@ -31,3 +33,19 @@
 .daily-hazard-legend [data-kind=very-high]:before{background:#7d1128}
 .daily-hazard-legend [data-kind=land]:before{background:rgba(190,211,226,.18)}
 @media(max-width:700px){.daily-trial-panel{padding:9px}.trial-form{gap:7px}}
+/* Risk's desktop preset keeps trial actions beside the camera controls. */
+@media(min-width:1024px){
+  [data-scenario=risk] .daily-trial-panel{padding:4px;font-size:12px}
+  [data-scenario=risk] .daily-trial-panel p{margin:2px 0}
+  [data-scenario=risk] .trial-form{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:7px 0}
+  [data-scenario=risk] .trial-field select,[data-scenario=risk] .trial-field input{min-height:28px;height:28px}
+  [data-scenario=risk] .trial-check{grid-column:1/4;min-height:25px}
+  [data-scenario=risk] .trial-submit{grid-column:4;min-height:30px}
+  [data-scenario=risk] .trial-controls{gap:5px;margin:1px 0}
+  [data-scenario=risk] .trial-controls button{min-height:28px;padding:4px 7px}
+  [data-scenario=risk] .trial-intro,[data-scenario=risk] .trial-mock-note{display:none}
+  [data-scenario=risk] .trial-form{margin:2px 0}
+  [data-scenario=risk] .trial-check input{min-height:17px;height:17px;padding:0;margin:0}
+  [data-scenario=risk] .trial-clock{display:none}
+  [data-scenario=risk] .trial-live{padding:3px 8px;margin:3px 0}
+}
