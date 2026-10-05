@@ -197,8 +197,8 @@ export function createOpsPlanPanels({opsStore, world, scheduleAI, onPreview = ()
           result.append(group);
         }
         const notes = String(value.plan?.notes_zh ?? '').replace(/\s+/g, ' ').trim();
-        const note = el('p', notes.length > 140 ? `${notes.slice(0, 139)}…` : notes, 'daily-control-note ops-plan-notes');
-        note.title = notes; result.append(note);
+        const note = el('p', notes, 'daily-control-note ops-plan-notes');
+        note.title = '點擊展開／收合'; note.addEventListener('click', () => note.classList.toggle('open')); result.append(note);
         const context = el('details', null, 'ops-plan-context'); context.append(el('summary', '驗證提醒與方案比較'));
         for (const warning of value.evaluation.warnings) context.append(el('p', warning, 'daily-control-note'));
         const prior = opsStore.get().adopted?.run;

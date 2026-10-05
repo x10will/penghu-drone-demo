@@ -77,7 +77,7 @@ const STYLE = `
 /** Dependency-injected view. onRiskChange owns persistence and other consumers. */
 export function renderRiskScenario({container, state, world, onRiskChange = () => {}, proposeRiskPatch}) {
   const readState = () => typeof state === 'function' ? state() : state?.get ? state.get() : state;
-  let current = normalizeRisk(readState()?.risk ?? DEFAULT_RISK), undoRisk = null, disposed = false, busy = false;
+  let current = normalizeRisk(readState()?.risk ?? DEFAULT_RISK), undoRisk = null, disposed = false, busy = false, lastApplied = null;
   let changed = new Set();
   const root = el('section', 'ops-risk-panel'), style = el('style'); style.textContent = STYLE;
   const wind = el('input'); wind.type = 'range'; wind.min = '.5'; wind.max = '2'; wind.step = '.05';
@@ -181,6 +181,8 @@ export function renderRiskScenario({container, state, world, onRiskChange = () =
   apply.addEventListener('click', async () => {
     if (busy || !sentence.value.trim()) { if (!busy) report('請先描述狀況。', true); return; }
     if (typeof proposeRiskPatch !== 'function') { report('AI 風險設定尚未就緒。', true); return; }
+    // Same sentence, scenario still carries its result: nothing to redo, keep the chip and summary.
+    if (lastApplied && lastApplied.sentence === sentence.value.trim() && lastApplied.risk === JSON.stringify(current)) { report('已套用。'); return; }
     busy = true; apply.disabled = true; updateMode(); report('正在理解情境…');
     const before = clone(current);
     try {
@@ -191,7 +193,7 @@ export function renderRiskScenario({container, state, world, onRiskChange = () =
       const patch = result?.patch ?? result;
       const next = applyRiskPatch(before, patch, world);
       undoRisk = before; changed = changedFields(before, next); undo.hidden = false;
-      persist(next, 'ai');
+      persist(next, 'ai'); lastApplied = {sentence: sentence.value.trim(), risk: JSON.stringify(current)};
       const mode = result?.modeChip ?? result?.modeLabel ?? result?.chip;
       chip.textContent = typeof mode === 'string' ? mode : mode?.label ?? ''; chip.hidden = !chip.textContent;
       summary.textContent = `${result.mode === 'rule' ? '規則已設定' : 'AI 已設定'}：${riskSummary(next, world)}`; report('設定已套用，風險場與航線試算已更新。');

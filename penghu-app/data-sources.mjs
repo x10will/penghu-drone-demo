@@ -5,13 +5,19 @@ const el = (tag, text, className) => {
   if (className) node.className = className;
   return node;
 };
-const valueText = value => Array.isArray(value) ? value.join('–')
-  : value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '未提供');
+const valueText = value => Array.isArray(value) ? value.map(valueText).join('–')
+  : value && typeof value === 'object' ? JSON.stringify(value)
+    : typeof value === 'number' && Number.isFinite(value) ? String(Math.round(value * 1000) / 1000) : String(value ?? '未提供');
 const clock = minutes => {
   if (!Number.isFinite(minutes)) return '未提供';
   const value = Math.round(minutes);
   return `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
 };
+
+export function aircraftName(meta = {}, fixture = {}) {
+  const values = new Map((meta.assumptions ?? []).map(item => [item.key, item.value]));
+  return (fixture.aircraft ?? meta.aircraft ?? AIRCRAFT_SPEC).name ?? values.get('drone_type') ?? 'JEDSY Jedsy X';
+}
 
 export function aircraftReference(meta = {}, fixture = {}) {
   const values = new Map((meta.assumptions ?? []).map(item => [item.key, item.value]));
@@ -23,14 +29,14 @@ export function aircraftReference(meta = {}, fixture = {}) {
   const payload = aircraft.payloadKg ?? values.get('payload_kg');
   const range = aircraft.rangeKm ?? values.get('range_km');
   const ids = aircraft.source_ids ?? ['S5', 'S6', 'S7', 'S8', 'S9'];
-  return `參考機型：${aircraft.name ?? values.get('drone_type') ?? 'JEDSY Jedsy X'} 公開規格（推定為極現科技 2026-09-07 澎科大校區示範（報導情境為馬公至吉貝島醫療物資運送）所用機型，未獲業者確認）— 作業風速上限 ${valueText(operating)} m/s、機體上限 ${valueText(body)} m/s、巡航 ${speedKph} km/h、酬載 ${valueText(payload)} kg、航程 ${valueText(range)} km ${ids.map(id => `[${id}]`).join('')}`;
+  return `參考機型：${aircraftName(meta, fixture)} 公開規格（推定為極現科技 2026-09-07 澎科大校區示範（報導情境為馬公至吉貝島醫療物資運送）所用機型，未獲業者確認）— 作業風速上限 ${valueText(operating)} m/s、機體上限 ${valueText(body)} m/s、巡航 ${speedKph} km/h、酬載 ${valueText(payload)} kg、航程 ${valueText(range)} km ${ids.map(id => `[${id}]`).join('')}`;
 }
 
 export function fixtureReferenceLines(fixture = {}) {
   const parameters = fixture.parameterMetadata ?? [];
   const notes = parameters.filter(item => ['drone_energy_wh', 'payload_box', 'thermal_profiles', 'temperature_bounds_c'].includes(item.key));
   return [`情境日期：${fixture.date ?? '未提供'}`, ...notes.map(item =>
-    `${item.key === 'payload_box' || item.key === 'temperature_bounds_c' ? `${item.zh}：${valueText(item.value)} ${item.unit ?? ''}；` : ''}${item.basis ?? item.zh ?? item.key} ${(item.source_ids ?? []).filter(id => !item.basis?.includes(`[${id}]`)).map(id => `[${id}]`).join('')}`)];
+    `${item.key === 'payload_box' || item.key === 'temperature_bounds_c' ? `${item.zh}：${[valueText(item.value), item.unit].filter(Boolean).join(' ')}；` : ''}${item.basis ?? item.zh ?? item.key} ${(item.source_ids ?? []).filter(id => !item.basis?.includes(`[${id}]`)).map(id => `[${id}]`).join('')}`)];
 }
 
 let sourceSequence = 0;
@@ -52,6 +58,11 @@ export function createDataSource({kind, meta = {}, landmask, fixture = {}, opsSt
   const info = el('span', ' ⓘ'); info.setAttribute('aria-hidden', 'true'); summary.append(info);
   summary.setAttribute('aria-label', `資料來源：${label}；展開查看來源與假設`);
   const body = el('div', null, 'daily-data-source-body'); root.append(summary, body);
+  const close = el('button', '✕', 'daily-data-source-close'); close.type = 'button'; close.setAttribute('aria-label', '關閉資料來源');
+  close.addEventListener('click', () => { root.open = false; summary.focus?.({preventScroll: true}); });
+  body.append(close);
+  const onOutside = event => { if (root.open && !root.contains(event.target)) root.open = false; };
+  const onKey = event => { if (event.key === 'Escape' && root.open) { root.open = false; event.stopPropagation(); } };
   const section = (title, description) => {
     const node = el('section'); node.append(el('strong', title));
     if (description) node.append(el('p', description));
@@ -205,7 +216,12 @@ export function createDataSource({kind, meta = {}, landmask, fixture = {}, opsSt
     aiLink.textContent = chip?.textContent?.trim() ? `本面板 AI 模式：${chip.textContent.trim()}` : '查看本面板 AI 模式';
     aiLink.href = `#${chip?.id || 'ops-ai-source-mode'}`;
   };
-  const toggle = () => { if (root.open) updateMode(); };
+  let listening = false;
+  const toggle = () => {
+    if (!root.open) return;
+    updateMode();
+    if (!listening) { listening = true; document.addEventListener('keydown', onKey, true); document.addEventListener('pointerdown', onOutside, true); }
+  };
   const focusMode = event => {
     const chip = modeChip();
     if (!chip) { event.preventDefault(); return; }
@@ -218,14 +234,16 @@ export function createDataSource({kind, meta = {}, landmask, fixture = {}, opsSt
   const host = el('section', null, 'daily-source-block');
   host.dataset.sourceKind = kind ?? '';
   if (delivery && kind === 'fixture') {
-    const note = el('div', null, 'daily-fixture-reference');
-    note.append(el('p', aircraftReference(meta, fixture)));
+    const note = el('details', null, 'daily-fixture-reference');
+    const noteSummary = el('summary', `參考機型：${aircraftName(meta, fixture)} 公開規格 ⓘ`);
+    noteSummary.setAttribute('aria-label', `參考機型：${aircraftName(meta, fixture)} 公開規格；展開查看來源與假設`);
+    note.append(noteSummary, el('p', aircraftReference(meta, fixture)));
     for (const value of fixtureReferenceLines(fixture)) note.append(el('p', value));
     host.append(note);
   }
   host.append(root);
   return {root: host, stop() {
     stopped = true; if (typeof unsubscribe === 'function') unsubscribe();
-    root.removeEventListener('toggle', toggle); aiLink?.removeEventListener('click', focusMode);
+    globalThis.document?.removeEventListener?.('keydown', onKey, true); globalThis.document?.removeEventListener?.('pointerdown', onOutside, true); root.removeEventListener('toggle', toggle); aiLink?.removeEventListener('click', focusMode);
   }};
 }
