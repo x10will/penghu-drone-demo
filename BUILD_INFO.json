@@ -1,6 +1,6 @@
 {
-  "built_at": "2026-10-05T07:31:18+00:00",
-  "penghu_drone_commit": "e1533b95aae08a1eed6e145ecb28fb0eae119c95",
+  "built_at": "2026-10-05T08:57:23+00:00",
+  "penghu_drone_commit": "f932fb0a40c12de6b15bcbab583dc92fad7c88a6",
   "penghu_drone_dirty": false,
   "dt_tourism": {
     "commit": "7116d70b9517e7d2aad1925c669b0e5341724469",
@@ -11,5 +11,5 @@
     }
   },
   "files": 141,
-  "bytes": 21632991
+  "bytes": 21633720
 }

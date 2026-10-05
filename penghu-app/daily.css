@@ -124,6 +124,10 @@ select option,select optgroup{background:var(--panel-surface);color:var(--panel-
 .daily-refusal a{color:#bff5ee}
 @media(max-width:767px){
   .panel-core-app .panel-grid>.panel-map{bottom:calc(var(--deck-h) + var(--nav-h))!important;height:auto!important}
+  /* The fixed map is a DOM child of the deck scroller; iOS WebKit paints nothing of it
+     outside the scroller's box, so the scroller spans the map area (cards keep the deck band). */
+  .panel-core-app .panel-grid{top:var(--phone-top)!important;height:auto!important;align-items:flex-end}
+  .panel-core-app .panel-grid>.grid-stack-item:not(.panel-map):not(.is-collapsed):not(.is-maximized){height:calc(var(--deck-h) - 12px)!important}
   .daily-plan,.daily-order-panel,.daily-resource{padding:9px}
   .daily-metric{padding:6px}
   .daily-metric-value{font-size:14px}
