@@ -1,5 +1,7 @@
 body{background:#0c1824}
 .panel-core-app{--panel-accent:#64d5c8}
+/* Native dropdown popups take these, not the select's own background: the filler under the list otherwise stays browser grey. */
+select option,select optgroup{background:var(--panel-surface);color:var(--panel-text)}
 .panel-core-app .panel-ai,.panel-core-app .source-label{display:none}
 .panel-core-app .panel-body{scrollbar-color:#456473 transparent}
 .panel-core-app .panel-body:has(.daily-plan),.panel-core-app .panel-body:has(.daily-order-panel),.panel-core-app .panel-body:has(.daily-resource){padding:0}

@@ -1,5 +1,5 @@
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {poseAt,riskAt,displayPath} from './timeline.mjs';
+import {poseAt,riskAt,displayPath,delayWording} from './timeline.mjs';
 import {droneSpan,labelWorldHeight} from './display-math.mjs';
 
 // The existing GLB renderer is shared with resource actors whose positions come
@@ -62,7 +62,7 @@ export class RouteActor {
   displayRoutes.forEach((route,index)=>{
    const points=route.path.map(p=>{const [x,y]=this.api.geoToLocal(p.lat,p.lng);return new THREE.Vector3(x,y,100);});
    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:index?0xffc36b:0x00fff0,depthTest:false,transparent:true,opacity:0.95}));line.name=index?'penghu-return-path':'penghu-outbound-path';this.root.add(line);
-   const pad=route.path[0];this.badge(index?`折返地面待命 ${Math.round(this.route.turnaround_min)} 分`:`延後 ${route.delay_min} 分 · 地面待命`,pad.lat,pad.lng,index?'turnaround':'origin-delay');
+   const pad=route.path[0];this.badge(index?`折返地面待命 ${Math.round(this.route.turnaround_min)} 分`:delayWording(route.delay_min).badge,pad.lat,pad.lng,index?'turnaround':'origin-delay');
    for(const [i,w]of route.waits.entries()){const p=poseAt(route,w.t0_h);this.badge(`${w.name} 停等 ${w.minutes} 分`,p.lat,p.lng,`wait-${index}-${i}`);}
   });
   this.label=this.makeLabel(this.options.label||'無人機 · 顯示比例放大');this.drone.add(this.label);this.label.position.z=180;
@@ -93,7 +93,7 @@ export class RouteActor {
   const map=new THREE.CanvasTexture(canvas),sprite=new THREE.Sprite(new THREE.SpriteMaterial({map,depthTest:false,transparent:true}));sprite.scale.set(1000,125,1);return sprite;
  }
  badge(text,lat,lng,id){const [x,y]=this.api.geoToLocal(lat,lng),z=this.api.sampleGround(x,y);if(!Number.isFinite(z))throw new Error('Missing pad ground height');
-  const label=this.makeLabel(text);label.name=`twin-wait-badge-${id}`;label.position.set(x,y,z+220);this.root.add(label);this.off.push(this.api.registerPickable(label,{id:`twin-${id}`,label:text,type:'wait',properties:{lat,lon:lng}}));}
+  const label=this.makeLabel(text);label.name=`twin-wait-badge-${id}`;label.position.set(x,y,z+220);label.userData.padPosition=label.position.clone();this.root.add(label);this.off.push(this.api.registerPickable(label,{id:`twin-${id}`,label:text,type:'wait',properties:{lat,lon:lng}}));}
  sync(hour,delta=0,tail=false){
   if(this.disposed||!this.drone)return null;
   const p=poseAt(this.displayRoute,hour),[x,y]=this.api.geoToLocal(p.lat,p.lng),z=p.ground?this.api.sampleGround(x,y):100;
@@ -103,10 +103,16 @@ export class RouteActor {
   for(const child of this.root.children)if(child.name.startsWith('twin-wait-badge-'))child.visible=p.phase!=='arrived';
   const span=this.visual.sync(new this.api.THREE.Vector3(x,y,z),p.headingRad,delta,tail);this.scale=span/this.nativeSpan;
   this.label.visible=!p.ground&&!tail;this.label.position.z=span*1.2;
-  const labels=[this.label,...this.root.children.filter(o=>o.name.startsWith('twin-wait-badge-'))],occupied=[];
-  for(const label of labels){const world=label.getWorldPosition(new this.api.THREE.Vector3()),v=world.clone().project(this.api.camera),depth=-world.applyMatrix4(this.api.camera.matrixWorldInverse).z,h=labelWorldHeight(depth,this.api.camera.fov,innerHeight);
-   label.scale.set(h*8,h,1);const x=(v.x+1)*innerWidth/2,y=(1-v.y)*innerHeight/2;
-   if(label.visible){label.visible=depth>0&&Math.abs(v.x)<1&&Math.abs(v.y)<1&&!occupied.some(p=>Math.abs(p.x-x)<148&&Math.abs(p.y-y)<22);if(label.visible)occupied.push({x,y});}
+  const {THREE,camera}=this.api,labels=[this.label,...this.root.children.filter(o=>o.name.startsWith('twin-wait-badge-'))],occupied=[],up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1);
+  const measure=label=>{const world=label.getWorldPosition(new THREE.Vector3()),v=world.clone().project(camera),depth=-world.applyMatrix4(camera.matrixWorldInverse).z;
+   return {v,depth,h:labelWorldHeight(depth,camera.fov,innerHeight),x:(v.x+1)*innerWidth/2,y:(1-v.y)*innerHeight/2};};
+  const taken=m=>occupied.some(p=>Math.abs(p.x-m.x)<148&&Math.abs(p.y-m.y)<22);
+  for(const label of labels){
+   // A pad badge that lands on a label already placed is stacked one label height above it instead of hidden.
+   const pad=label.userData.padPosition;if(pad)label.position.copy(pad);
+   let m=measure(label);if(pad&&label.visible&&taken(m)){label.position.addScaledVector(up,m.h*24/18);m=measure(label);}
+   label.scale.set(m.h*8,m.h,1);
+   if(label.visible){label.visible=m.depth>0&&Math.abs(m.v.x)<1&&Math.abs(m.v.y)<1&&!taken(m);if(label.visible)occupied.push({x:m.x,y:m.y});}
   }
   const v=this.drone.position.clone().project(this.api.camera);
   return {...p,alt:z,hour,requestId:this.requestId,risk:riskAt(this.route,hour),totalRisk:this.route.total_risk,

@@ -1,6 +1,6 @@
 import {aircraftReference} from './data-sources.mjs';
 import {loadField, plan, label} from './planner.mjs';
-import {makeItinerary, poseAt, returnRequest, riskAt, safetyCost, TURNAROUND_MIN} from './timeline.mjs';
+import {delayWording, itinerarySummary, makeItinerary, poseAt, returnRequest, riskAt, safetyCost, TURNAROUND_MIN} from './timeline.mjs';
 import {DEFAULT_RISK, deriveRiskField, normalizeRisk} from './risk-scenario.mjs';
 
 const META_URL = new URL('../data/danger_frames/danger_meta.json', import.meta.url);
@@ -76,7 +76,7 @@ function addRoute(parent, route, heading, safetyLimit) {
   const facts = el('dl', 'trial-facts');
   const cost = safetyCost(route, safetyLimit);
   for (const [name, value] of [
-    ['延後起飛', `${route.delay_min} 分鐘`], ['途中停等', `${route.waited_min} 分鐘`],
+    ['延後起飛', delayWording(route.delay_min).row], ['途中停等', `${route.waited_min} 分鐘`],
     ['本程風險', route.total_risk.toFixed(4)],
     ['最大單格風險', `${route.max_cell_total.toFixed(3)}／門檻 ${safetyLimit}`],
     ['安全繞行與停等', `理想直飛 ${cost.directMin} 分鐘 → 實際 ${cost.actualMin} 分鐘（增加 ${cost.extraMin} 分鐘）`],
@@ -205,8 +205,8 @@ export function createTrialPlanner({run, store, actions, risk = DEFAULT_RISK, wo
         fly.disabled = replay.disabled = !accepted;
         clear.disabled = !accepted && (!localMessage || !!loadError);
         status.textContent = blocked || (busy ? '正在計算安全航線…'
-          : accepted?.returnReason_zh ? '僅出程可行；回程未成立，可模擬出程。'
-          : accepted ? '航線試算完成；可用今日時鐘查看飛行。'
+          : accepted?.returnReason_zh ? `僅出程可行；回程未成立 · ${itinerarySummary(accepted.itinerary)}`
+          : accepted ? `航線試算完成 · ${itinerarySummary(accepted.itinerary)}`
           : message || '選擇起降點與時間後規劃航線。');
         clock.textContent = `今日時鐘 ${label(state.snapshot.timeMin / 60)} · ${label(run.startMin / 60)}–${label(run.endMin / 60)}`;
         if (accepted !== displayedPlan || message !== displayedMessage || localOutbound !== displayedOutbound) {

@@ -102,6 +102,20 @@ export function riskAt(route, hour) {
   return clamp(risk, 0, route.total_risk);
 }
 
+// Zero delay is not a delay: the origin badge and the details row say so plainly.
+export function delayWording(delayMin) {
+  const minutes = Math.round(Number(delayMin));
+  return minutes > 0 ? {badge: `延後 ${delayMin} 分 · 地面待命`, row: `${delayMin} 分鐘`}
+    : {badge: '準點起飛', row: '不延後'};
+}
+
+// One line a person can read without opening the details: each leg's times and the turnaround.
+export function itinerarySummary(itinerary) {
+  const [outbound, back] = itinerary.routes, span = route => `${route.depart_label} → ${route.arrive_label}`;
+  return back ? `出程 ${span(outbound)} · 整備 ${Math.round(itinerary.turnaround_min)} 分 · 回程 ${span(back)}`
+    : `出程 ${span(outbound)}`;
+}
+
 export function safetyCost(route, safetyLimit) {
   const actualMin = Math.round((route.arrive_h - route.depart_h) * 60);
   const directMin = Math.round(route.direct_h * 60);
